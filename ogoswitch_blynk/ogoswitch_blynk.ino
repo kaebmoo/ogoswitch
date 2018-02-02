@@ -39,7 +39,7 @@ SOFTWARE.
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-
+char auth[] = "YourAuthToken";
 
 // const char *ssid = "CAT-Mobile";
 const char *ssid = "CAT-Register";
@@ -87,7 +87,7 @@ unsigned long stoptime;
 unsigned long currenttime;
 unsigned long topic_currenttime;
 Timer t_settime;
-
+BlynkTimer timer;
 
 
 void buzzer_sound()
@@ -426,6 +426,11 @@ void blink()
   }
 }
 
+void d1Status()
+{
+  Serial.println(digitalRead(relayPin));
+}
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -439,6 +444,13 @@ void setup() {
   Serial.println(myRoom);
 
   setup_wifi();
+
+  /*
+   * mqtt version
+   * 
+   * 
+   */
+ /*
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   if (client.connect(myRoom, mqtt_user, mqtt_password)) {
@@ -448,6 +460,7 @@ void setup() {
     client.subscribe(room_stop);
     client.subscribe(room_currenttime);
   }
+  */
 
   delay(500);
 
@@ -465,6 +478,8 @@ void setup() {
   Serial.print("start : ");
   Serial.print(second(t));
   Serial.println();
+
+  timer.setInterval(1000L, d1Status);
 }
 
 void loop() {
@@ -473,14 +488,14 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     setup_wifi();
   }
-  else {
-    if (!client.connected()) {
-      reconnect();
-    }
-  }
+  // else {
+  //   if (!client.connected()) {
+  //     reconnect();
+  //   }
+  // }
 
-  client.loop();
-  //Blynk.run();
+  // client.loop();
+  Blynk.run();
 
   //t_settime.update();
   currenttime = (unsigned long) now();

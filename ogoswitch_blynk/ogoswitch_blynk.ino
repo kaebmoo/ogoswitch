@@ -36,10 +36,11 @@ SOFTWARE.
 
 /* Comment this out to disable prints and save space */
 #define BLYNK_PRINT Serial
+// #define BLYNK_DEBUG // Optional, this enables lots of prints
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "YourAuthToken";
+char auth[] = "";
 
 // const char *ssid = "CAT-Mobile";
 const char *ssid = "CAT-Register";
@@ -88,6 +89,7 @@ unsigned long currenttime;
 unsigned long topic_currenttime;
 Timer t_settime;
 BlynkTimer timer;
+WidgetLED led1(1);
 
 
 void buzzer_sound()
@@ -375,19 +377,6 @@ void reconnectBlynk() {
 
 void checkvalidtime()
 {
-    Serial.print(bstart);
-    Serial.print(" ");
-    Serial.print(bstop);
-    Serial.print(" ");
-    Serial.print(bcurrent);
-    Serial.print(" ");
-    Serial.print(force);
-    Serial.print(" ");
-    Serial.print(starttime);
-    Serial.print(" ");
-    Serial.print(stoptime);
-    Serial.print(" ");
-    Serial.println(currenttime);
 
     //if (bstart && bstop && !bcurrent && !force) {
     //  setTime((time_t) starttime);
@@ -429,7 +418,34 @@ void blink()
 void d1Status()
 {
   Serial.println(digitalRead(relayPin));
+  if (digitalRead(relayPin)) {
+    led1.on();
+  }
+  else {
+    led1.off();
+  }
+  
+    Serial.print(bstart);
+    Serial.print(" ");
+    Serial.print(bstop);
+    Serial.print(" ");
+    Serial.print(bcurrent);
+    Serial.print(" ");
+    Serial.print(force);
+    Serial.print(" ");
+    Serial.print(starttime);
+    Serial.print(" ");
+    Serial.print(stoptime);
+    Serial.print(" ");
+    Serial.println(currenttime);
 }
+
+BLYNK_CONNECTED() 
+{
+// Your code here
+  Serial.println("Blynk Connected");
+}
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -464,8 +480,10 @@ void setup() {
 
   delay(500);
 
-  //Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
-  //Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
+  Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
+  boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
+  Serial.print("Blynk connect : ");
+  Serial.println(result);
 
   //pinMode(BUILTIN_LED, OUTPUT);
   buzzer_sound();
@@ -496,6 +514,7 @@ void loop() {
 
   // client.loop();
   Blynk.run();
+  timer.run();
 
   //t_settime.update();
   currenttime = (unsigned long) now();

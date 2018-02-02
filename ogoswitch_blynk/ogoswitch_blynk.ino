@@ -145,7 +145,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       bstart = false;
       bstop = false;
 
-    } else if ((char)payload[0] == '2') {       // 2 - get status from D2 (connect D2 <---> D1) or D1 (relay pin) 
+    } else if ((char)payload[0] == '2') {       // 2 - get status from D2 (connect D2 <---> D1) or D1 (relay pin)
         statusvalue = digitalRead(relayPin);
         if (statusvalue == HIGH) {
           client.publish(room_status, "ON");
@@ -240,6 +240,7 @@ void relay(boolean set)
     client.publish(room_status,"OFF", true);
     Serial.print(room_status);
     Serial.println(" : OFF");
+    buzzer_sound();
 
     delay(500);
     digitalWrite(BUILTIN_LED, LOW);
@@ -424,7 +425,7 @@ void d1Status()
   else {
     led1.off();
   }
-  
+
     Serial.print(bstart);
     Serial.print(" ");
     Serial.print(bstop);
@@ -440,10 +441,28 @@ void d1Status()
     Serial.println(currenttime);
 }
 
-BLYNK_CONNECTED() 
+BLYNK_CONNECTED()
 {
-// Your code here
+  // Your code here
   Serial.println("Blynk Connected");
+  Blynk.syncAll();
+
+}
+
+BLYNK_WRITE(V2)
+{
+  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+
+  // process received value
+  Serial.println(pinValue);
+  if (pinValue == 1) {
+    led1.on();
+    relay(HIGH);
+  }
+  else {
+    led1.off();
+    relay(LOW);
+  }
 }
 
 
@@ -463,8 +482,8 @@ void setup() {
 
   /*
    * mqtt version
-   * 
-   * 
+   *
+   *
    */
  /*
   client.setServer(mqtt_server, 1883);
@@ -523,6 +542,6 @@ void loop() {
     blink();
   }
   else {
-    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin 
+    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin
   }
 }

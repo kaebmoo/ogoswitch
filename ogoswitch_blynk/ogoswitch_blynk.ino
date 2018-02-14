@@ -29,6 +29,7 @@ SOFTWARE.
 #include <Time.h>
 #include <TimeLib.h>
 #include <Timer.h>
+#include <EEPROM.h>
 
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
@@ -259,6 +260,15 @@ void setup_wifi() {
   WiFiManager wifiManager;
   String APName;
 
+  EEPROM.begin(512);
+  readEEPROM(auth, 60, 32);
+  Serial.print("auth token : ");
+  Serial.println(auth);
+  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.addParameter(&custom_c_auth);
+
+
   delay(10);
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
@@ -320,6 +330,14 @@ void setup_wifi() {
   Serial.print(":");
   Serial.println(mac[5],HEX);
   */
+
+  if (shouldSaveConfig) {
+    strcpy(c_auth, custom_c_auth.getValue());
+    strcpy(auth, c_auth);
+    Serial.print("auth token : ");
+    Serial.println(auth);
+    writeEEPROM(auth, 60, 32);
+  }
 }
 
 void reconnect() {
@@ -503,13 +521,6 @@ void setup() {
 
   Serial.println(myRoom);
 
-  EEPROM.begin(512);
-  readEEPROM(auth, 60, 32);
-  Serial.print("auth token : ");
-  Serial.println(auth);
-  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.addParameter(&custom_c_auth);
   
   setup_wifi();
 
@@ -532,13 +543,7 @@ void setup() {
 
   delay(500);
   
-  if (shouldSaveConfig) {
-    strcpy(c_auth, custom_c_auth.getValue());
-    strcpy(auth, c_auth);
-    Serial.print("auth token : ");
-    Serial.println(auth);
-    writeEEPROM(auth, 60, 32);
-  }
+  
 
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.

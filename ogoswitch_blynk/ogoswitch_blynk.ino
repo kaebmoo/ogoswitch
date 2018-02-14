@@ -41,7 +41,7 @@ SOFTWARE.
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "";
+char auth[] = "12345678901234567890abcdefghijkl";
 char c_auth[33] = "";           // authen token blynk
 
 //flag for saving data
@@ -312,7 +312,7 @@ void setup_wifi() {
 
   Serial.println("");
   Serial.println("WiFi connected");
-  Serial.println("IP address: ");
+  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
   /*

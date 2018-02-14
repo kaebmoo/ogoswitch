@@ -41,6 +41,10 @@ SOFTWARE.
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "";
+char c_auth[33] = "";           // authen token blynk
+
+//flag for saving data
+bool shouldSaveConfig = false;
 
 // const char *ssid = "CAT-Mobile";
 const char *ssid = "CAT-Register";
@@ -465,6 +469,27 @@ BLYNK_WRITE(V2)
   }
 }
 
+void readEEPROM(char* buff, int offset, int len) {
+    int i;
+    for (i=0;i<len;i++) {
+        buff[i] = (char)EEPROM.read(offset+i);
+    }
+    buff[len] = '\0';
+}
+
+void writeEEPROM(char* buff, int offset, int len) {
+    int i;
+    for (i=0;i<len;i++) {
+        EEPROM.write(offset+i,buff[i]);
+    }
+    EEPROM.commit();
+}
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -478,6 +503,14 @@ void setup() {
 
   Serial.println(myRoom);
 
+  EEPROM.begin(512);
+  readEEPROM(auth, 60, 32);
+  Serial.print("auth token : ");
+  Serial.println(auth);
+  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.addParameter(&custom_c_auth);
+  
   setup_wifi();
 
   /*
@@ -498,6 +531,14 @@ void setup() {
   */
 
   delay(500);
+  
+  if (shouldSaveConfig) {
+    strcpy(c_auth, custom_c_auth.getValue());
+    strcpy(auth, c_auth);
+    Serial.print("auth token : ");
+    Serial.println(auth);
+    writeEEPROM(auth, 60, 32);
+  }
 
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
@@ -517,6 +558,7 @@ void setup() {
   Serial.println();
 
   timer.setInterval(1000L, d1Status);
+  
 }
 
 void loop() {

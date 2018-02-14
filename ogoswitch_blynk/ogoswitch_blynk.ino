@@ -74,11 +74,11 @@ PubSubClient client(espClient);
 char *mqtt_user = "chang";
 char *mqtt_password = "chang";
 
-char *myRoom = "room/1";
-char *room_status = "room/1/status";
-char *room_start = "room/1/start";
-char *room_stop = "room/1/stop";
-char *room_currenttime = "room/1/currenttime";
+char *myRoom = "room/1";                // "room/1"
+char *room_status = "room/1/status";    // "room/1/status"
+char *room_start = "room/1/start";      // "room/1/start"
+char *room_stop = "room/1/stop";        // "room/1/stop"
+char *room_currenttime = "room/1/currenttime";  // "room/1/currenttime"
 
 int mqtt_reconnect = 0;
 int wifi_reconnect = 0;
@@ -288,27 +288,7 @@ void setup_wifi() {
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
 
-  /*
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
 
-  //WiFi.config(ip,gateway,subnet);  // fix ip address
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    wifi_reconnect++;
-    if (wifi_reconnect > MAXRETRY) {
-      wifi_reconnect = 0;
-
-      break;
-    }
-  }
-
-  */
 
   Serial.println("");
   Serial.println("WiFi connected");
@@ -521,7 +501,7 @@ void setup() {
 
   Serial.println(myRoom);
 
-  
+
   setup_wifi();
 
   /*
@@ -542,8 +522,8 @@ void setup() {
   */
 
   delay(500);
-  
-  
+
+
 
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
@@ -563,7 +543,7 @@ void setup() {
   Serial.println();
 
   timer.setInterval(1000L, d1Status);
-  
+
 }
 
 void loop() {

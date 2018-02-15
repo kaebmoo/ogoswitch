@@ -53,7 +53,7 @@ const char *password = "";
 //const char* mqtt_server = "192.168.43.252";
 const char* mqtt_server = "192.168.2.7";
 //const char* mqtt_server = "192.168.8.50";
-const int relayPin = D1;
+const int relayPin = D7;
 const int statusPin = D2;
 const int buzzer=D5; //Buzzer control port, default D5
 const long interval = 1000;
@@ -458,12 +458,17 @@ BLYNK_WRITE(V2)
   // process received value
   Serial.println(pinValue);
   if (pinValue == 1) {
-    led1.on();
-    relay(HIGH);
+    
+    relay(true);
+    if (digitalRead(relayPin)) {
+      led1.on();
+    }
   }
   else {
-    led1.off();
-    relay(LOW);
+    relay(false);
+    if(!digitalRead(relayPin)) {
+      led1.off();
+    }
   }
 }
 

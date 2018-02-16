@@ -554,9 +554,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (WiFi.status() != WL_CONNECTED) {
-    setup_wifi();
-  }
+  //if (WiFi.status() != WL_CONNECTED) {
+  //  setup_wifi();
+  //}
   // else {
   //   if (!client.connected()) {
   //     reconnect();

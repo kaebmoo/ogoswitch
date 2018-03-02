@@ -30,6 +30,7 @@ SOFTWARE.
 #include <TimeLib.h>
 #include <Timer.h>
 #include <EEPROM.h>
+#include <WidgetRTC.h>
 
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
@@ -93,9 +94,9 @@ unsigned long stoptime;
 unsigned long currenttime;
 unsigned long topic_currenttime;
 Timer t_settime;
-BlynkTimer timer;
+BlynkTimer timer, checkConnectionTimer;
 WidgetLED led1(1);
-
+WidgetRTC rtc;
 
 void buzzer_sound()
 {
@@ -363,6 +364,7 @@ BLYNK_WRITE(V1)
   int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
 
   // process received value
+  Serial.print("Received value V1 : ");
   Serial.println(pinValue);
   if (pinValue == 1)
     buzzer_sound();
@@ -371,9 +373,9 @@ BLYNK_WRITE(V1)
 void reconnectBlynk() {
   if (!Blynk.connected()) {
     if(Blynk.connect()) {
-      BLYNK_LOG("Reconnected");
+      BLYNK_LOG("Blynk Reconnected");
     } else {
-      BLYNK_LOG("Not reconnected");
+      BLYNK_LOG("Blynk Not reconnected");
     }
   }
 }
@@ -390,10 +392,12 @@ void checkvalidtime()
       if ( (currenttime >= starttime) && (currenttime <= stoptime) ) {
         if (!ON) {
           relay(true);
+          Blynk.virtualWrite(V2, 1);
         }
       }
       else if (ON) {
         relay(false);
+        Blynk.virtualWrite(V2, 0);
       }
     }
 }
@@ -420,6 +424,7 @@ void blink()
 
 void d1Status()
 {
+  Serial.print("Relay pin status: ");
   Serial.println(digitalRead(relayPin));
   if (digitalRead(relayPin)) {
     led1.on();
@@ -445,10 +450,12 @@ void d1Status()
 
 BLYNK_CONNECTED()
 {
-  // Your code here
   Serial.println("Blynk Connected");
-  Blynk.syncAll();
-
+  rtc.begin();
+  // Blynk.syncAll();
+  Blynk.syncVirtual(V10);
+  Blynk.syncVirtual(V2);
+  Blynk.syncVirtual(V1);
 }
 
 BLYNK_WRITE(V2)
@@ -456,6 +463,7 @@ BLYNK_WRITE(V2)
   int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
 
   // process received value
+  Serial.print("Received value V2: ");
   Serial.println(pinValue);
   if (pinValue == 1) {
     
@@ -463,12 +471,20 @@ BLYNK_WRITE(V2)
     if (digitalRead(relayPin)) {
       led1.on();
     }
+    // force to open ; do not check start time, stop time
+    force = true;
+    bstart = false;
+    bstop = false;
   }
   else {
     relay(false);
     if(!digitalRead(relayPin)) {
       led1.off();
     }
+    // force to close ; do not check start time, stop time    
+    force = true;
+    bstart = false;
+    bstop = false;
   }
 }
 
@@ -492,6 +508,129 @@ void writeEEPROM(char* buff, int offset, int len) {
 void saveConfigCallback () {
   Serial.println("Should save config");
   shouldSaveConfig = true;
+}
+
+BLYNK_WRITE(V10) 
+{
+  
+  long startTimeInSecs = param[0].asLong();
+  Serial.print("Start time in secs: ");
+  Serial.println(startTimeInSecs);
+  Serial.println();
+
+  TimeInputParam t(param);
+  struct tm c_time;
+  time_t t_of_day;
+
+  // Process start time
+
+  if (t.hasStartTime())
+  {
+    Serial.println(String("Start: ") +
+                   t.getStartHour() + ":" +
+                   t.getStartMinute() + ":" +
+                   t.getStartSecond());
+
+     
+
+     Serial.println(String("Year: ") + year() + String(" Month: ") + month() + String(" Day: ") + day());
+     c_time.tm_year = year()-1900;
+     c_time.tm_mon= month()-1;
+     c_time.tm_mday = day();
+     c_time.tm_hour = t.getStartHour();
+     c_time.tm_min = t.getStartMinute();
+     c_time.tm_sec = 0;
+     c_time.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
+     t_of_day = mktime(&c_time);
+     // printf("seconds since the Epoch: %ld\n", (long) t_of_day)
+     Serial.println(String("Start seconds since the Epoch: ") + t_of_day);
+     starttime = t_of_day;
+     bstart = true;
+  }
+  else if (t.isStartSunrise())
+  {
+    Serial.println("Start at sunrise");
+  }
+  else if (t.isStartSunset())
+  {
+    Serial.println("Start at sunset");
+  }
+  else
+  {
+    // Do nothing
+  }
+
+  // Process stop time
+
+  if (t.hasStopTime())
+  {
+    Serial.println(String("Stop: ") +
+                   t.getStopHour() + ":" +
+                   t.getStopMinute() + ":" +
+                   t.getStopSecond());
+    Serial.println(String("Year: ") + year() + String(" Month: ") + month() + String(" Day: ") + day());
+     c_time.tm_year = year()-1900;
+     c_time.tm_mon= month()-1;
+     c_time.tm_mday = day();
+     c_time.tm_hour = t.getStopHour();
+     c_time.tm_min = t.getStopMinute();
+     c_time.tm_sec = 0;
+     c_time.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
+     t_of_day = mktime(&c_time);
+     // printf("seconds since the Epoch: %ld\n", (long) t_of_day)
+     Serial.println(String("Stop seconds since the Epoch: ") + t_of_day);
+     stoptime = t_of_day;
+     bstop = true;
+  }
+  else if (t.isStopSunrise())
+  {
+    Serial.println("Stop at sunrise");
+  }
+  else if (t.isStopSunset())
+  {
+    Serial.println("Stop at sunset");
+  }
+  else
+  {
+    // Do nothing: no stop time was set
+  }
+
+  // Process timezone
+  // Timezone is already added to start/stop time
+
+  Serial.println(String("Time zone: ") + t.getTZ());
+
+  // Get timezone offset (in seconds)
+  Serial.println(String("Time zone offset: ") + t.getTZ_Offset());
+
+  if (bstart && bstop) {
+    force = false;
+  }
+
+
+  // weekday();         // day of the week (1-7), Sunday is day 1
+  // 1. Sunday, 2. Mon, 3. Tue, ...
+  Serial.println(String("Weekday ") + weekday());
+  int iWeekday;
+  iWeekday = weekday() - 1;
+  if (iWeekday == 0) {
+    iWeekday = 7;
+  }
+  
+  // Process weekdays (1. Mon, 2. Tue, 3. Wed, ...)
+  for (int i = 1; i <= 7; i++) {
+    if (t.isWeekdaySelected(i)) {
+      Serial.println(String("Day ") + i + " is selected");
+      if (i == iWeekday) {
+        Serial.println("Working day");
+   
+        bcurrent = true;
+        
+      }
+    }
+  }
+
+  Serial.println();
 }
 
 void setup() {
@@ -549,11 +688,13 @@ void setup() {
   delay(200);
 
   time_t t = now();
-  Serial.print("start : ");
+  Serial.print("start time: ");
   Serial.print(second(t));
   Serial.println();
 
+  setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timer.setInterval(1000L, d1Status);
+  checkConnectionTimer.setInterval(2000L, reconnectBlynk);
 
 }
 
@@ -572,6 +713,7 @@ void loop() {
   // client.loop();
   Blynk.run();
   timer.run();
+  checkConnectionTimer.run();
 
   //t_settime.update();
   currenttime = (unsigned long) now();

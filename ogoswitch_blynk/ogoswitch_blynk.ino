@@ -24,7 +24,6 @@ SOFTWARE.
 */
 
 #include <PubSubClient.h>
-#include "ESP8266WiFi.h"
 #include <BlynkSimpleEsp8266.h>
 #include <Time.h>
 #include <TimeLib.h>
@@ -35,6 +34,24 @@ SOFTWARE.
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266HTTPUpdateServer.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266httpUpdate.h>
+
+const char* host = "ogoswitch-webupdate";
+const char* update_path = "/firmware";
+const char* update_username = "admin";
+const char* update_password = "ogoswitch";
+const int FW_VERSION = 2;
+const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
+
+ESP8266WebServer httpServer(80);
+ESP8266HTTPUpdateServer httpUpdater;
+
 
 /* Comment this out to disable prints and save space */
 #define BLYNK_PRINT Serial
@@ -84,6 +101,7 @@ char *room_currenttime = "room/1/currenttime";  // "room/1/currenttime"
 int mqtt_reconnect = 0;
 int wifi_reconnect = 0;
 // int flagtime = 0;
+int SAVE = 6550;      // Configuration save : if 6550 = saved
 boolean ON = false;
 boolean bstart = false;
 boolean bstop = false;
@@ -93,7 +111,7 @@ unsigned long starttime;
 unsigned long stoptime;
 unsigned long currenttime;
 unsigned long topic_currenttime;
-Timer t_settime;
+Timer t_settime, checkFirmware;
 BlynkTimer timer, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
@@ -265,6 +283,11 @@ void setup_wifi() {
   readEEPROM(auth, 60, 32);
   Serial.print("auth token : ");
   Serial.println(auth);
+  int saved = eeGetInt(500);
+  if (saved == 6550) {
+    strcpy(c_auth, auth);
+  }
+
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_c_auth);
@@ -318,6 +341,7 @@ void setup_wifi() {
     Serial.print("auth token : ");
     Serial.println(auth);
     writeEEPROM(auth, 60, 32);
+    eeWriteInt(500, 6550);
   }
 }
 
@@ -466,7 +490,7 @@ BLYNK_WRITE(V2)
   Serial.print("Received value V2: ");
   Serial.println(pinValue);
   if (pinValue == 1) {
-    
+
     relay(true);
     if (digitalRead(relayPin)) {
       led1.on();
@@ -481,7 +505,7 @@ BLYNK_WRITE(V2)
     if(!digitalRead(relayPin)) {
       led1.off();
     }
-    // force to close ; do not check start time, stop time    
+    // force to close ; do not check start time, stop time
     force = true;
     bstart = false;
     bstop = false;
@@ -504,15 +528,34 @@ void writeEEPROM(char* buff, int offset, int len) {
     EEPROM.commit();
 }
 
+void eeWriteInt(int pos, int val) {
+    byte* p = (byte*) &val;
+    EEPROM.write(pos, *p);
+    EEPROM.write(pos + 1, *(p + 1));
+    EEPROM.write(pos + 2, *(p + 2));
+    EEPROM.write(pos + 3, *(p + 3));
+    EEPROM.commit();
+}
+
+int eeGetInt(int pos) {
+  int val;
+  byte* p = (byte*) &val;
+  *p        = EEPROM.read(pos);
+  *(p + 1)  = EEPROM.read(pos + 1);
+  *(p + 2)  = EEPROM.read(pos + 2);
+  *(p + 3)  = EEPROM.read(pos + 3);
+  return val;
+}
+
 //callback notifying us of the need to save config
 void saveConfigCallback () {
   Serial.println("Should save config");
   shouldSaveConfig = true;
 }
 
-BLYNK_WRITE(V10) 
+BLYNK_WRITE(V10)
 {
-  
+
   long startTimeInSecs = param[0].asLong();
   Serial.print("Start time in secs: ");
   Serial.println(startTimeInSecs);
@@ -531,7 +574,7 @@ BLYNK_WRITE(V10)
                    t.getStartMinute() + ":" +
                    t.getStartSecond());
 
-     
+
 
      Serial.println(String("Year: ") + year() + String(" Month: ") + month() + String(" Day: ") + day());
      c_time.tm_year = year()-1900;
@@ -616,22 +659,79 @@ BLYNK_WRITE(V10)
   if (iWeekday == 0) {
     iWeekday = 7;
   }
-  
+
   // Process weekdays (1. Mon, 2. Tue, 3. Wed, ...)
   for (int i = 1; i <= 7; i++) {
     if (t.isWeekdaySelected(i)) {
       Serial.println(String("Day ") + i + " is selected");
       if (i == iWeekday) {
         Serial.println("Working day");
-   
+
         bcurrent = true;
-        
+
       }
     }
   }
 
   Serial.println();
 }
+
+void upintheair()
+{
+  String mac = "ogoswitch_blynk.ino.d1_mini";
+  String fwURL = String( firmwareUrlBase );
+  fwURL.concat( mac );
+  String fwVersionURL = fwURL;
+  fwVersionURL.concat( ".version" );
+
+  Serial.println( "Checking for firmware updates." );
+  // Serial.print( "MAC address: " );
+  // Serial.println( mac );
+  Serial.print( "Firmware version URL: " );
+  Serial.println( fwVersionURL );
+
+  HTTPClient httpClient;
+  httpClient.begin( fwVersionURL );
+  int httpCode = httpClient.GET();
+  if( httpCode == 200 ) {
+    String newFWVersion = httpClient.getString();
+
+    Serial.print( "Current firmware version: " );
+    Serial.println( FW_VERSION );
+    Serial.print( "Available firmware version: " );
+    Serial.println( newFWVersion );
+
+    int newVersion = newFWVersion.toInt();
+
+    if( newVersion > FW_VERSION ) {
+      Serial.println( "Preparing to update" );
+
+      String fwImageURL = fwURL;
+      fwImageURL.concat( ".bin" );
+      t_httpUpdate_return ret = ESPhttpUpdate.update( fwImageURL );
+
+      switch(ret) {
+        case HTTP_UPDATE_FAILED:
+          Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+          break;
+
+        case HTTP_UPDATE_NO_UPDATES:
+          Serial.println("HTTP_UPDATE_NO_UPDATES");
+          break;
+      }
+    }
+    else {
+      Serial.println( "Already on latest version" );
+    }
+  }
+  else {
+    Serial.print( "Firmware version check failed, got HTTP response code " );
+    Serial.println( httpCode );
+  }
+  httpClient.end();
+  // ESPhttpUpdate.update("www.ogonan.com", 80, "/ogoupdate/ogoswitch_blynk.ino.d1_mini.bin");
+}
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -643,6 +743,11 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   // t_settime.every(5000, takeSettingTime);
 
+  Serial.println();
+  Serial.println("Ogoswitch version 2018030502");
+  Serial.print("Free space: ");
+  Serial.println(ESP.getFreeSketchSpace());
+  Serial.print("My room: ");
   Serial.println(myRoom);
 
 
@@ -667,18 +772,25 @@ void setup() {
 
   delay(500);
 
-
+  // web update OTA
+  String host_update_name;
+  host_update_name = "ogoswitch-"+String(ESP.getChipId());
+  MDNS.begin(host_update_name.c_str());
+  httpUpdater.setup(&httpServer, update_path, update_username, update_password);
+  httpServer.begin();
+  MDNS.addService("http", "tcp", 80);
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host_update_name.c_str(), update_path, update_username, update_password);
 
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
   Serial.print("Blynk connect : ");
   Serial.println(result);
   if(!Blynk.connected()){
-    Serial.println("Not connected to Blynk server"); 
+    Serial.println("Not connected to Blynk server");
     Blynk.connect(3333);  // try to connect to server with default timeout
   }
   else {
-    Serial.println("Connected to Blynk server");     
+    Serial.println("Connected to Blynk server");
   }
   //pinMode(BUILTIN_LED, OUTPUT);
   buzzer_sound();
@@ -695,7 +807,8 @@ void setup() {
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timer.setInterval(1000L, d1Status);
   checkConnectionTimer.setInterval(2000L, reconnectBlynk);
-
+  checkFirmware.every(86400000L, upintheair);
+  upintheair();
 }
 
 void loop() {
@@ -709,11 +822,13 @@ void loop() {
   //     reconnect();
   //   }
   // }
+  httpServer.handleClient();
 
   // client.loop();
   Blynk.run();
   timer.run();
   checkConnectionTimer.run();
+  checkFirmware.update();
 
   //t_settime.update();
   currenttime = (unsigned long) now();

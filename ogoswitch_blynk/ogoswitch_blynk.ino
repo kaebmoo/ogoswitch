@@ -60,6 +60,7 @@ ESP8266HTTPUpdateServer httpUpdater;
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "12345678901234567890abcdefghijkl";
+
 char c_auth[33] = "";           // authen token blynk
 
 //flag for saving data
@@ -279,34 +280,42 @@ void setup_wifi() {
   WiFiManager wifiManager;
   String APName;
 
-  EEPROM.begin(512);
-  readEEPROM(auth, 60, 32);
-  Serial.print("auth token : ");
-  Serial.println(auth);
-  int saved = eeGetInt(500);
-  if (saved == 6550) {
-    strcpy(c_auth, auth);
-  }
-
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_c_auth);
-
-
   delay(10);
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
   //in seconds
   wifiManager.setTimeout(300);
-
-
   APName = "OgoSwitch-"+String(ESP.getChipId());
-  if(!wifiManager.autoConnect(APName.c_str()) ) {
-    Serial.println("failed to connect and hit timeout");
-    delay(3000);
-    //reset and try again, or maybe put it to deep sleep
-    ESP.reset();
-    delay(5000);
+  
+  EEPROM.begin(512);
+  readEEPROM(auth, 60, 32);
+  Serial.print("auth token : ");
+  Serial.println(auth);
+  
+  int saved = eeGetInt(500);
+  if (saved == 6550) {
+    strcpy(c_auth, auth);
+    
+    if(!wifiManager.autoConnect(APName.c_str()) ) {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      //reset and try again, or maybe put it to deep sleep
+      ESP.reset();
+      delay(5000);
+    }
+  }
+  else {
+    Serial.println("On demand AP");
+    if (!wifiManager.startConfigPortal(APName.c_str())) {
+      Serial.println("failed to connect and hit timeout");
+      delay(3000);
+      //reset and try again, or maybe put it to deep sleep
+      ESP.reset();
+      delay(5000);
+    }    
   }
 
   //if you get here you have connected to the WiFi
@@ -750,7 +759,7 @@ void setup() {
   Serial.print("My room: ");
   Serial.println(myRoom);
 
-
+  
   setup_wifi();
 
   /*

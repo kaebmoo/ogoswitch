@@ -103,17 +103,19 @@ int mqtt_reconnect = 0;
 int wifi_reconnect = 0;
 // int flagtime = 0;
 int SAVE = 6550;      // Configuration save : if 6550 = saved
+int timer = 0;
 boolean ON = false;
 boolean bstart = false;
 boolean bstop = false;
 boolean bcurrent = false;
 boolean force = false;
+boolean TIMER = false;
 unsigned long starttime;
 unsigned long stoptime;
 unsigned long currenttime;
 unsigned long topic_currenttime;
 Timer t_settime, checkFirmware;
-BlynkTimer timer, checkConnectionTimer;
+BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
 
@@ -271,7 +273,7 @@ void relay(boolean set)
     digitalWrite(BUILTIN_LED, LOW);
     delay(500);
     digitalWrite(BUILTIN_LED, HIGH);
-
+    Blynk.syncVirtual(V10);
   }
 }
 
@@ -289,16 +291,16 @@ void setup_wifi() {
   //in seconds
   wifiManager.setTimeout(300);
   APName = "OgoSwitch-"+String(ESP.getChipId());
-  
+
   EEPROM.begin(512);
   readEEPROM(auth, 60, 32);
   Serial.print("auth token : ");
   Serial.println(auth);
-  
+
   int saved = eeGetInt(500);
   if (saved == 6550) {
     strcpy(c_auth, auth);
-    
+
     if(!wifiManager.autoConnect(APName.c_str()) ) {
       Serial.println("failed to connect and hit timeout");
       delay(3000);
@@ -315,7 +317,7 @@ void setup_wifi() {
       //reset and try again, or maybe put it to deep sleep
       ESP.reset();
       delay(5000);
-    }    
+    }
   }
 
   //if you get here you have connected to the WiFi
@@ -481,46 +483,6 @@ void d1Status()
     Serial.println(currenttime);
 }
 
-BLYNK_CONNECTED()
-{
-  Serial.println("Blynk Connected");
-  rtc.begin();
-  // Blynk.syncAll();
-  Blynk.syncVirtual(V10);
-  Blynk.syncVirtual(V2);
-  Blynk.syncVirtual(V1);
-}
-
-BLYNK_WRITE(V2)
-{
-  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
-
-  // process received value
-  Serial.print("Received value V2: ");
-  Serial.println(pinValue);
-  if (pinValue == 1) {
-
-    relay(true);
-    if (digitalRead(relayPin)) {
-      led1.on();
-    }
-    // force to open ; do not check start time, stop time
-    force = true;
-    bstart = false;
-    bstop = false;
-  }
-  else {
-    relay(false);
-    if(!digitalRead(relayPin)) {
-      led1.off();
-    }
-    // force to close ; do not check start time, stop time
-    force = true;
-    bstart = false;
-    bstop = false;
-  }
-}
-
 void readEEPROM(char* buff, int offset, int len) {
     int i;
     for (i=0;i<len;i++) {
@@ -561,6 +523,60 @@ void saveConfigCallback () {
   Serial.println("Should save config");
   shouldSaveConfig = true;
 }
+
+BLYNK_CONNECTED()
+{
+  Serial.println("Blynk Connected");
+  rtc.begin();
+  // Blynk.syncAll();
+  Blynk.syncVirtual(V10);
+  Blynk.syncVirtual(V2);
+  Blynk.syncVirtual(V1);
+  Blynk.syncVirtual(V11);
+  Blynk.syncVirtual(V12);
+}
+
+BLYNK_WRITE(V2)
+{
+  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+
+  // process received value
+  Serial.print("Received value V2: ");
+  Serial.println(pinValue);
+  if (pinValue == 1 && TIMER == 0) {    
+    relay(true);
+    if (digitalRead(relayPin)) {
+      led1.on();
+    }
+    // force to open ; do not check start time, stop time
+    force = true;
+    bstart = false;
+    bstop = false;
+    
+  }
+  else if (pinValue == 0) {
+    relay(false);
+    if(!digitalRead(relayPin)) {
+      led1.off();
+    }
+    // force to close ; do not check start time, stop time
+    force = true;
+    bstart = false;
+    bstop = false;
+  }
+  else if (pinValue == 1 && TIMER == 1) {
+    Serial.println("Start in timer mode");
+    force = false;
+    bstart = true;
+    bstop = true;
+    bcurrent = true;
+    starttime = currenttime;
+    stoptime = starttime + (timer * 60);
+    
+  }
+}
+
+
 
 BLYNK_WRITE(V10)
 {
@@ -685,6 +701,29 @@ BLYNK_WRITE(V10)
   Serial.println();
 }
 
+BLYNK_WRITE(V11)
+{
+  int stepperValue = param.asInt();
+  timer = stepperValue;
+  Serial.print("Received value V11: ");
+  Serial.println(timer);
+}
+
+BLYNK_WRITE(V12)
+{
+  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+
+  // process received value
+  Serial.print("Received value V12: ");
+  Serial.println(pinValue);
+  if (pinValue == 1) {
+    TIMER = true;
+  }
+  else {
+    TIMER = false;
+  }
+}
+
 void upintheair()
 {
   String mac = "ogoswitch_blynk.ino.d1_mini";
@@ -759,7 +798,7 @@ void setup() {
   Serial.print("My room: ");
   Serial.println(myRoom);
 
-  
+
   setup_wifi();
 
   /*
@@ -814,7 +853,7 @@ void setup() {
   Serial.println();
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
-  timer.setInterval(1000L, d1Status);
+  timerStatus.setInterval(1000L, d1Status);
   checkConnectionTimer.setInterval(2000L, reconnectBlynk);
   checkFirmware.every(86400000L, upintheair);
   upintheair();
@@ -835,7 +874,7 @@ void loop() {
 
   // client.loop();
   Blynk.run();
-  timer.run();
+  timerStatus.run();
   checkConnectionTimer.run();
   checkFirmware.update();
 

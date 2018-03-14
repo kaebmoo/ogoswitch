@@ -23,6 +23,10 @@ SOFTWARE.
 
 */
 
+/* Comment this out to disable prints and save space */
+// #define BLYNK_PRINT Serial
+// #define BLYNK_DEBUG // Optional, this enables lots of prints
+
 #include <PubSubClient.h>
 #include <BlynkSimpleEsp8266.h>
 #include <Time.h>
@@ -51,11 +55,6 @@ const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 ESP8266WebServer httpServer(80);
 ESP8266HTTPUpdateServer httpUpdater;
-
-
-/* Comment this out to disable prints and save space */
-#define BLYNK_PRINT Serial
-// #define BLYNK_DEBUG // Optional, this enables lots of prints
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -118,6 +117,7 @@ Timer t_settime, checkFirmware;
 BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
+int checkState = 0;
 
 void buzzer_sound()
 {
@@ -277,20 +277,10 @@ void relay(boolean set)
   }
 }
 
-void setup_wifi() {
-
+void setup_wifi() 
+{
   WiFiManager wifiManager;
   String APName;
-
-  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.addParameter(&custom_c_auth);
-  delay(10);
-  //sets timeout until configuration portal gets turned off
-  //useful to make it all retry or go to sleep
-  //in seconds
-  wifiManager.setTimeout(300);
-  APName = "OgoSwitch-"+String(ESP.getChipId());
 
   EEPROM.begin(512);
   readEEPROM(auth, 60, 32);
@@ -299,25 +289,29 @@ void setup_wifi() {
 
   int saved = eeGetInt(500);
   if (saved == 6550) {
-    strcpy(c_auth, auth);
-
-    if(!wifiManager.autoConnect(APName.c_str()) ) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      //reset and try again, or maybe put it to deep sleep
-      ESP.reset();
-      delay(5000);
-    }
+    strcpy(c_auth, auth);    
   }
-  else {
-    Serial.println("On demand AP");
-    if (!wifiManager.startConfigPortal(APName.c_str())) {
-      Serial.println("failed to connect and hit timeout");
-      delay(3000);
-      //reset and try again, or maybe put it to deep sleep
-      ESP.reset();
-      delay(5000);
-    }
+  else {    
+    ondeman_wifi_setup();
+  }
+  
+  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.addParameter(&custom_c_auth);
+  delay(10);
+  
+  //sets timeout until configuration portal gets turned off
+  //useful to make it all retry or go to sleep
+  //in seconds
+  wifiManager.setTimeout(300);
+  APName = "ogoSwitch-"+String(ESP.getChipId());
+  
+  if(!wifiManager.autoConnect(APName.c_str()) ) {
+    Serial.println("failed to connect and hit timeout");
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(5000);
   }
 
   //if you get here you have connected to the WiFi
@@ -353,6 +347,32 @@ void setup_wifi() {
     Serial.println(auth);
     writeEEPROM(auth, 60, 32);
     eeWriteInt(500, 6550);
+  }
+}
+
+void ondeman_wifi_setup()
+{
+  WiFiManager wifiManager;
+  String APName;
+  
+  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.addParameter(&custom_c_auth);
+  delay(10);
+  
+  //sets timeout until configuration portal gets turned off
+  //useful to make it all retry or go to sleep
+  //in seconds
+  wifiManager.setTimeout(300);
+  APName = "ogoSwitch-"+String(ESP.getChipId());
+  
+  Serial.println("On demand AP");
+  if (!wifiManager.startConfigPortal(APName.c_str())) {
+    Serial.println("failed to connect and hit timeout");
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(5000);
   }
 }
 
@@ -406,6 +426,7 @@ BLYNK_WRITE(V1)
 }
 
 void reconnectBlynk() {
+  Serial.println("Check Blynk connection.");
   if (!Blynk.connected()) {
     if(Blynk.connect()) {
       BLYNK_LOG("Blynk Reconnected");
@@ -459,28 +480,38 @@ void blink()
 
 void d1Status()
 {
-  Serial.print("Relay pin status: ");
-  Serial.println(digitalRead(relayPin));
-  if (digitalRead(relayPin)) {
-    led1.on();
-  }
-  else {
-    led1.off();
-  }
+  int state;
 
-    Serial.print(bstart);
-    Serial.print(" ");
-    Serial.print(bstop);
-    Serial.print(" ");
-    Serial.print(bcurrent);
-    Serial.print(" ");
-    Serial.print(force);
-    Serial.print(" ");
-    Serial.print(starttime);
-    Serial.print(" ");
-    Serial.print(stoptime);
-    Serial.print(" ");
-    Serial.println(currenttime);
+  state = digitalRead(relayPin);
+  
+  Serial.print("Relay pin status: ");
+  Serial.println(state);
+
+  if (checkState != state) {
+    if (state) {
+      led1.on();
+      checkState = state;
+    }
+    else {
+      led1.off();
+      checkState = state;
+    }    
+  }
+  
+
+  Serial.print(bstart);
+  Serial.print(" ");
+  Serial.print(bstop);
+  Serial.print(" ");
+  Serial.print(bcurrent);
+  Serial.print(" ");
+  Serial.print(force);
+  Serial.print(" ");
+  Serial.print(starttime);
+  Serial.print(" ");
+  Serial.print(stoptime);
+  Serial.print(" ");
+  Serial.println(currenttime);
 }
 
 void readEEPROM(char* buff, int offset, int len) {
@@ -854,7 +885,7 @@ void setup() {
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timerStatus.setInterval(1000L, d1Status);
-  checkConnectionTimer.setInterval(2000L, reconnectBlynk);
+  checkConnectionTimer.setInterval(5000L, reconnectBlynk);
   checkFirmware.every(86400000L, upintheair);
   upintheair();
 }

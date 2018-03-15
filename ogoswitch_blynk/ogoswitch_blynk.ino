@@ -289,30 +289,14 @@ void setup_wifi()
 
   int saved = eeGetInt(500);
   if (saved == 6550) {
-    strcpy(c_auth, auth);    
+    strcpy(c_auth, auth); 
+    auto_wifi_connect();   
   }
   else {    
-    ondeman_wifi_setup();
+    ondemand_wifi_setup();
   }
   
-  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.addParameter(&custom_c_auth);
-  delay(10);
-  
-  //sets timeout until configuration portal gets turned off
-  //useful to make it all retry or go to sleep
-  //in seconds
-  wifiManager.setTimeout(300);
-  APName = "ogoSwitch-"+String(ESP.getChipId());
-  
-  if(!wifiManager.autoConnect(APName.c_str()) ) {
-    Serial.println("failed to connect and hit timeout");
-    delay(3000);
-    //reset and try again, or maybe put it to deep sleep
-    ESP.reset();
-    delay(5000);
-  }
+
 
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
@@ -340,7 +324,35 @@ void setup_wifi()
   Serial.println(mac[5],HEX);
   */
 
+
+}
+
+void auto_wifi_connect()
+{
+  WiFiManager wifiManager;
+  String APName;
+
+  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.addParameter(&custom_c_auth);
+  delay(10);
+  
+  //sets timeout until configuration portal gets turned off
+  //useful to make it all retry or go to sleep
+  //in seconds
+  wifiManager.setTimeout(300);
+  APName = "ogoSwitch-"+String(ESP.getChipId());
+  
+  if(!wifiManager.autoConnect(APName.c_str()) ) {
+    Serial.println("failed to connect and hit timeout");
+    delay(3000);
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(5000);
+  }
+  
   if (shouldSaveConfig) {
+    Serial.println("Saving config...");
     strcpy(c_auth, custom_c_auth.getValue());
     strcpy(auth, c_auth);
     Serial.print("auth token : ");
@@ -350,7 +362,7 @@ void setup_wifi()
   }
 }
 
-void ondeman_wifi_setup()
+void ondemand_wifi_setup()
 {
   WiFiManager wifiManager;
   String APName;
@@ -373,6 +385,15 @@ void ondeman_wifi_setup()
     //reset and try again, or maybe put it to deep sleep
     ESP.reset();
     delay(5000);
+  }
+  if (shouldSaveConfig) {
+    Serial.println("Saving config...");
+    strcpy(c_auth, custom_c_auth.getValue());
+    strcpy(auth, c_auth);
+    Serial.print("auth token : ");
+    Serial.println(auth);
+    writeEEPROM(auth, 60, 32);
+    eeWriteInt(500, 6550);
   }
 }
 

@@ -9,4 +9,4 @@ internet switch
 * timer mode (via blynk app)
 
 
-support blynk, netpie
+support blynk, netpie, mqtt

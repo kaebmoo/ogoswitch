@@ -268,12 +268,11 @@ void relay(boolean set)
     Serial.print(room_status);
     Serial.println(" : OFF");
     buzzer_sound();
-
+    Blynk.syncVirtual(V10);
     
     digitalWrite(BUILTIN_LED, LOW);
     delay(500);
     digitalWrite(BUILTIN_LED, HIGH);
-    Blynk.syncVirtual(V10);
   }
 }
 

@@ -71,7 +71,7 @@ const char *password = "";
 //const char* mqtt_server = "192.168.43.252";
 const char* mqtt_server = "192.168.2.7";
 //const char* mqtt_server = "192.168.8.50";
-const int relayPin = D7;
+const int relayPin = D1;
 const int statusPin = D2;
 const int buzzer=D5; //Buzzer control port, default D5
 const long interval = 1000;
@@ -269,7 +269,7 @@ void relay(boolean set)
     Serial.println(" : OFF");
     buzzer_sound();
 
-    delay(500);
+    
     digitalWrite(BUILTIN_LED, LOW);
     delay(500);
     digitalWrite(BUILTIN_LED, HIGH);

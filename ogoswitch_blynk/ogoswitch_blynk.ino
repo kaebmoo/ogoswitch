@@ -252,8 +252,9 @@ void relay(boolean set)
     digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
     // but actually the LED is on; this is because
     // it is acive low on the ESP-01)
-
+    #ifdef MQTT
     client.publish(room_status,"ON", true);
+    #endif
     Serial.print(room_status);
     Serial.println(" : ON");
     buzzer_sound();
@@ -264,7 +265,9 @@ void relay(boolean set)
 
     digitalWrite(relayPin, LOW);
     digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+    #ifdef MQTT
     client.publish(room_status,"OFF", true);
+    #endif
     Serial.print(room_status);
     Serial.println(" : OFF");
     buzzer_sound();
@@ -857,7 +860,9 @@ void setup() {
    *
    *
    */
- /*
+ 
+  #ifdef MQTT
+  
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   if (client.connect(myRoom, mqtt_user, mqtt_password)) {
@@ -867,7 +872,8 @@ void setup() {
     client.subscribe(room_stop);
     client.subscribe(room_currenttime);
   }
-  */
+  #endif 
+  
 
   delay(500);
 

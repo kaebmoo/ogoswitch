@@ -448,7 +448,7 @@ BLYNK_WRITE(V1)
     buzzer_sound();
 }
 
-void reconnectBlynk() {
+void checkBlynkConnection() {
   Serial.println("Check Blynk connection.");
   if (!Blynk.connected()) {
     if(Blynk.connect()) {
@@ -911,7 +911,7 @@ void setup() {
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timerStatus.setInterval(1000L, d1Status);
-  checkConnectionTimer.setInterval(5000L, reconnectBlynk);
+  checkConnectionTimer.setInterval(300000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   upintheair();
 }
@@ -930,7 +930,10 @@ void loop() {
   httpServer.handleClient();
 
   // client.loop();
-  Blynk.run();
+  if (Blynk.connected()) {
+    Blynk.run();  
+  }
+  
   timerStatus.run();
   checkConnectionTimer.run();
   checkFirmware.update();

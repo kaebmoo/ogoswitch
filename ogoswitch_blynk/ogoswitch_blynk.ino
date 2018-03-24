@@ -50,7 +50,7 @@ const char* host = "ogoswitch-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
-const int FW_VERSION = 1;
+const int FW_VERSION = 3; // 20180324
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 ESP8266WebServer httpServer(80);
@@ -272,14 +272,14 @@ void relay(boolean set)
     Serial.println(" : OFF");
     buzzer_sound();
     Blynk.syncVirtual(V10);
-    
+
     digitalWrite(BUILTIN_LED, LOW);
     delay(500);
     digitalWrite(BUILTIN_LED, HIGH);
   }
 }
 
-void setup_wifi() 
+void setup_wifi()
 {
   WiFiManager wifiManager;
   String APName;
@@ -291,13 +291,13 @@ void setup_wifi()
 
   int saved = eeGetInt(500);
   if (saved == 6550) {
-    strcpy(c_auth, auth); 
-    auto_wifi_connect();   
+    strcpy(c_auth, auth);
+    auto_wifi_connect();
   }
-  else {    
+  else {
     ondemand_wifi_setup();
   }
-  
+
 
 
   //if you get here you have connected to the WiFi
@@ -338,13 +338,13 @@ void auto_wifi_connect()
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_c_auth);
   delay(10);
-  
+
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
   //in seconds
   wifiManager.setTimeout(300);
   APName = "ogoSwitch-"+String(ESP.getChipId());
-  
+
   if(!wifiManager.autoConnect(APName.c_str()) ) {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
@@ -352,7 +352,7 @@ void auto_wifi_connect()
     ESP.reset();
     delay(5000);
   }
-  
+
   if (shouldSaveConfig) {
     Serial.println("Saving config...");
     strcpy(c_auth, custom_c_auth.getValue());
@@ -368,18 +368,18 @@ void ondemand_wifi_setup()
 {
   WiFiManager wifiManager;
   String APName;
-  
+
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_c_auth);
   delay(10);
-  
+
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
   //in seconds
   wifiManager.setTimeout(300);
   APName = "ogoSwitch-"+String(ESP.getChipId());
-  
+
   Serial.println("On demand AP");
   if (!wifiManager.startConfigPortal(APName.c_str())) {
     Serial.println("failed to connect and hit timeout");
@@ -506,7 +506,7 @@ void d1Status()
   int state;
 
   state = digitalRead(relayPin);
-  
+
   Serial.print("Relay pin status: ");
   Serial.println(state);
 
@@ -518,9 +518,9 @@ void d1Status()
     else {
       led1.off();
       checkState = state;
-    }    
+    }
   }
-  
+
 
   Serial.print(bstart);
   Serial.print(" ");
@@ -592,12 +592,12 @@ BLYNK_CONNECTED()
 
 BLYNK_WRITE(V2)
 {
-  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+  int pinValue = param.asInt(); // assigning incoming value from pin V2 to a variable
 
   // process received value
   Serial.print("Received value V2: ");
   Serial.println(pinValue);
-  if (pinValue == 1 && TIMER == 0) {    
+  if (pinValue == 1 && TIMER == 0) {
     relay(true);
     if (digitalRead(relayPin)) {
       led1.on();
@@ -606,7 +606,7 @@ BLYNK_WRITE(V2)
     force = true;
     bstart = false;
     bstop = false;
-    
+
   }
   else if (pinValue == 0) {
     relay(false);
@@ -626,7 +626,7 @@ BLYNK_WRITE(V2)
     bcurrent = true;
     starttime = currenttime;
     stoptime = starttime + (timer * 60);
-    
+
   }
 }
 
@@ -739,17 +739,22 @@ BLYNK_WRITE(V10)
     iWeekday = 7;
   }
 
+  int WorkingDay[7] = {0,0,0,0,0,0,0};
+  
   // Process weekdays (1. Mon, 2. Tue, 3. Wed, ...)
   for (int i = 1; i <= 7; i++) {
     if (t.isWeekdaySelected(i)) {
       Serial.println(String("Day ") + i + " is selected");
-      if (i == iWeekday) {
-        Serial.println("Working day");
-
-        bcurrent = true;
-
-      }
+      WorkingDay[i-1] = 1;  
     }
+  }
+  
+  if (WorkingDay[iWeekday-1] == 1) {
+    Serial.println("Working day");
+    bcurrent = true;
+  }
+  else {
+    bcurrent = false;
   }
 
   Serial.println();
@@ -860,9 +865,9 @@ void setup() {
    *
    *
    */
- 
+
   #ifdef MQTT
-  
+
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   if (client.connect(myRoom, mqtt_user, mqtt_password)) {
@@ -872,8 +877,8 @@ void setup() {
     client.subscribe(room_stop);
     client.subscribe(room_currenttime);
   }
-  #endif 
-  
+  #endif
+
 
   delay(500);
 
@@ -931,9 +936,9 @@ void loop() {
 
   // client.loop();
   if (Blynk.connected()) {
-    Blynk.run();  
+    Blynk.run();
   }
-  
+
   timerStatus.run();
   checkConnectionTimer.run();
   checkFirmware.update();

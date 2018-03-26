@@ -32,6 +32,7 @@ SOFTWARE.
 #include <Time.h>
 #include <TimeLib.h>
 #include <Timer.h>
+#include <TimeAlarms.h>
 #include <EEPROM.h>
 #include <WidgetRTC.h>
 
@@ -51,6 +52,7 @@ const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
 const int FW_VERSION = 3; // 20180324
+const char* LASTUPDATE = "3.20180326";
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 ESP8266WebServer httpServer(80);
@@ -103,6 +105,7 @@ int wifi_reconnect = 0;
 // int flagtime = 0;
 int SAVE = 6550;      // Configuration save : if 6550 = saved
 int timer = 0;
+boolean schedule = false;
 boolean ON = false;
 boolean bstart = false;
 boolean bstop = false;
@@ -501,6 +504,15 @@ void blink()
   }
 }
 
+void syncSchedule()
+{
+  String syncTime = String(hour()) + ":" + minute() + ":" + second();
+  Serial.print("Synchronize time: ");
+  Serial.println(syncTime);
+  
+  Blynk.syncVirtual(V10);
+}
+
 void d1Status()
 {
   int state;
@@ -521,6 +533,9 @@ void d1Status()
     }
   }
 
+  String currentTime = String(hour()) + ":" + minute() + ":" + second();
+  Serial.print("Current time: ");
+  Serial.println(currentTime);
 
   Serial.print(bstart);
   Serial.print(" ");
@@ -582,6 +597,8 @@ BLYNK_CONNECTED()
 {
   Serial.println("Blynk Connected");
   rtc.begin();
+  
+  
   // Blynk.syncAll();
   Blynk.syncVirtual(V10);
   Blynk.syncVirtual(V2);
@@ -740,15 +757,15 @@ BLYNK_WRITE(V10)
   }
 
   int WorkingDay[7] = {0,0,0,0,0,0,0};
-  
+
   // Process weekdays (1. Mon, 2. Tue, 3. Wed, ...)
   for (int i = 1; i <= 7; i++) {
     if (t.isWeekdaySelected(i)) {
       Serial.println(String("Day ") + i + " is selected");
-      WorkingDay[i-1] = 1;  
+      WorkingDay[i-1] = 1;
     }
   }
-  
+
   if (WorkingDay[iWeekday-1] == 1) {
     Serial.println("Working day");
     bcurrent = true;
@@ -757,7 +774,15 @@ BLYNK_WRITE(V10)
     bcurrent = false;
   }
 
+  // setTime((time_t) now());
+  String currentTime = String(hour()) + ":" + minute() + ":" + second();
+  Serial.print("Current time: ");
+  Serial.println(currentTime);
   Serial.println();
+  if(!schedule) {
+    Alarm.alarmRepeat(0,0,0, syncSchedule);  
+    schedule = true; 
+  }  
 }
 
 BLYNK_WRITE(V11)
@@ -849,9 +874,11 @@ void setup() {
   pinMode(statusPin, INPUT);
   pinMode(buzzer, OUTPUT);
   // t_settime.every(5000, takeSettingTime);
+  setTime(0,0,0,1,1,18);
 
   Serial.println();
-  Serial.println("Ogoswitch version 2018030502");
+  Serial.print("Ogoswitch version ");
+  Serial.println(LASTUPDATE);
   Serial.print("Free space: ");
   Serial.println(ESP.getFreeSketchSpace());
   Serial.print("My room: ");
@@ -902,7 +929,8 @@ void setup() {
   else {
     Serial.println("Connected to Blynk server");
   }
-  //pinMode(BUILTIN_LED, OUTPUT);
+  
+  
   buzzer_sound();
   digitalWrite(BUILTIN_LED, LOW);  // turn on LED with voltage HIGH
   delay(200);                      // wait one second
@@ -916,9 +944,12 @@ void setup() {
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timerStatus.setInterval(1000L, d1Status);
+  
+  // timerStatus.setInterval(1000L, syncSchedule);
   checkConnectionTimer.setInterval(300000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   upintheair();
+  
 }
 
 void loop() {
@@ -952,4 +983,6 @@ void loop() {
   else {
     digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin
   }
+
+  Alarm.delay(0);
 }

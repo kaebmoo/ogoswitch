@@ -760,6 +760,7 @@ BLYNK_WRITE(V10)
 
   // Process weekdays (1. Mon, 2. Tue, 3. Wed, ...)
   for (int i = 1; i <= 7; i++) {
+    // Serial.println(String("is weekday selected: ") + t.isWeekdaySelected(i));
     if (t.isWeekdaySelected(i)) {
       Serial.println(String("Day ") + i + " is selected");
       WorkingDay[i-1] = 1;

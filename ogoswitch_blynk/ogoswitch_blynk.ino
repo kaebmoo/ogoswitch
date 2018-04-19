@@ -809,17 +809,23 @@ BLYNK_WRITE(V12)
   }
 }
 
+  
 void upintheair()
-{
-  String mac = "ogoswitch_blynk.ino.d1_mini";
+{  
+  #ifdef ARDUINO_ESP8266_WEMOS_D1MINI
+    String filename = "ogoswitch_blynk.ino.d1_mini";
+  #elif ARDUINO_ESP8266_WEMOS_D1MINILITE
+    String filename = "ogoswitch_blynk.ino.d1_minilite";
+  #endif
+    
   String fwURL = String( firmwareUrlBase );
-  fwURL.concat( mac );
+  fwURL.concat( filename );
   String fwVersionURL = fwURL;
   fwVersionURL.concat( ".version" );
 
   Serial.println( "Checking for firmware updates." );
-  // Serial.print( "MAC address: " );
-  // Serial.println( mac );
+  // Serial.print( "file name: " );
+  // Serial.println( filename );
   Serial.print( "Firmware version URL: " );
   Serial.println( fwVersionURL );
 

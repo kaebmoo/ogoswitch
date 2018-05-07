@@ -953,7 +953,7 @@ void setup() {
   timerStatus.setInterval(1000L, d1Status);
   
   // timerStatus.setInterval(1000L, syncSchedule);
-  checkConnectionTimer.setInterval(300000L, checkBlynkConnection);
+  checkConnectionTimer.setInterval(60000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   upintheair();
   

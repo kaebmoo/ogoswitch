@@ -121,6 +121,129 @@ BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
 int checkState = 0;
+int overlap = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+
+  Serial.begin(115200);
+  pinMode(relayPin, OUTPUT);
+  pinMode(D4, OUTPUT);
+  pinMode(statusPin, INPUT);
+  pinMode(buzzer, OUTPUT);
+  // t_settime.every(5000, takeSettingTime);
+  setTime(0,0,0,1,1,18);
+
+  Serial.println();
+  Serial.print("Ogoswitch version ");
+  Serial.println(LASTUPDATE);
+  Serial.print("Free space: ");
+  Serial.println(ESP.getFreeSketchSpace());
+  Serial.print("My room: ");
+  Serial.println(myRoom);
+
+
+  setup_wifi();
+
+  /*
+   * mqtt version
+   *
+   *
+   */
+
+  #ifdef MQTT
+
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  if (client.connect(myRoom, mqtt_user, mqtt_password)) {
+    client.publish(room_status,"hello world");
+    client.subscribe(myRoom);
+    client.subscribe(room_start);
+    client.subscribe(room_stop);
+    client.subscribe(room_currenttime);
+  }
+  #endif
+
+
+  delay(500);
+
+  // web update OTA
+  String host_update_name;
+  host_update_name = "ogoswitch-"+String(ESP.getChipId());
+  MDNS.begin(host_update_name.c_str());
+  httpUpdater.setup(&httpServer, update_path, update_username, update_password);
+  httpServer.begin();
+  MDNS.addService("http", "tcp", 80);
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host_update_name.c_str(), update_path, update_username, update_password);
+
+  Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
+  boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
+  Serial.print("Blynk connect : ");
+  Serial.println(result);
+  if(!Blynk.connected()){
+    Serial.println("Not connected to Blynk server");
+    Blynk.connect(3333);  // try to connect to server with default timeout
+  }
+  else {
+    Serial.println("Connected to Blynk server");
+  }
+
+
+  buzzer_sound();
+  digitalWrite(BUILTIN_LED, LOW);  // turn on LED with voltage HIGH
+  delay(200);                      // wait one second
+  digitalWrite(BUILTIN_LED, HIGH);   // turn off LED with voltage LOW
+  delay(200);
+
+  time_t t = now();
+  Serial.print("start time: ");
+  Serial.print(second(t));
+  Serial.println();
+
+  setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
+  timerStatus.setInterval(1000L, d1Status);
+
+  // timerStatus.setInterval(1000L, syncSchedule);
+  checkConnectionTimer.setInterval(300000L, checkBlynkConnection);
+  checkFirmware.every(86400000L, upintheair);
+  upintheair();
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+  //if (WiFi.status() != WL_CONNECTED) {
+  //  setup_wifi();
+  //}
+  // else {
+  //   if (!client.connected()) {
+  //     reconnect();
+  //   }
+  // }
+  httpServer.handleClient();
+
+  // client.loop();
+  if (Blynk.connected()) {
+    Blynk.run();
+  }
+
+  timerStatus.run();
+  checkConnectionTimer.run();
+  checkFirmware.update();
+
+  //t_settime.update();
+  currenttime = (unsigned long) now();
+  checkvalidtime();
+  if(!ON) {
+    blink();
+  }
+  else {
+    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin
+  }
+
+  Alarm.delay(0);
+}
 
 void buzzer_sound()
 {
@@ -253,6 +376,7 @@ void relay(boolean set)
     ON = true;
     digitalWrite(relayPin, HIGH);
     digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    Blynk.virtualWrite(V2, 1);
     // but actually the LED is on; this is because
     // it is acive low on the ESP-01)
     #ifdef MQTT
@@ -268,6 +392,7 @@ void relay(boolean set)
 
     digitalWrite(relayPin, LOW);
     digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+    Blynk.virtualWrite(V2, 0);
     #ifdef MQTT
     client.publish(room_status,"OFF", true);
     #endif
@@ -464,23 +589,33 @@ void checkBlynkConnection() {
 
 void checkvalidtime()
 {
-
-    //if (bstart && bstop && !bcurrent && !force) {
-    //  setTime((time_t) starttime);
-    //  bcurrent = true;
-    //}
-
     if (bstart && bstop && bcurrent && !force) {
       if ( (currenttime >= starttime) && (currenttime <= stoptime) ) {
         if (!ON) {
           relay(true);
-          Blynk.virtualWrite(V2, 1);
+        }
+      }
+      else if (overlap) {
+        // day 0 when currenttime >= starttime or currenttime < stoptime turn relay on
+          // ON
+        if ((currenttime >= starttime) || (currenttime < stoptime) ) {
+          if (!ON) {
+            relay(true);
+          }
+        }
+        // day 0+1 at midnight currenttime <= starttime
+        // day 0+1 when currenttime >= stoptime turn relay off
+          // OFF
+        else if (currenttime >= stoptime) {
+          if (ON) {
+            relay(false);
+          }
         }
       }
       else if (ON) {
         relay(false);
-        Blynk.virtualWrite(V2, 0);
       }
+
     }
 }
 
@@ -509,7 +644,7 @@ void syncSchedule()
   String syncTime = String(hour()) + ":" + minute() + ":" + second();
   Serial.print("Synchronize time: ");
   Serial.println(syncTime);
-  
+
   Blynk.syncVirtual(V10);
 }
 
@@ -597,8 +732,8 @@ BLYNK_CONNECTED()
 {
   Serial.println("Blynk Connected");
   rtc.begin();
-  
-  
+
+
   // Blynk.syncAll();
   Blynk.syncVirtual(V10);
   Blynk.syncVirtual(V2);
@@ -697,6 +832,7 @@ BLYNK_WRITE(V10)
   else
   {
     // Do nothing
+    bstart = false;
   }
 
   // Process stop time
@@ -732,6 +868,7 @@ BLYNK_WRITE(V10)
   else
   {
     // Do nothing: no stop time was set
+    bstop = false;
   }
 
   // Process timezone
@@ -744,6 +881,12 @@ BLYNK_WRITE(V10)
 
   if (bstart && bstop) {
     force = false;
+    if (stoptime < starttime) {
+      overlap = 1;
+    }
+    else {
+      overlap = 0;
+    }
   }
 
 
@@ -781,9 +924,9 @@ BLYNK_WRITE(V10)
   Serial.println(currentTime);
   Serial.println();
   if(!schedule) {
-    Alarm.alarmRepeat(0,0,0, syncSchedule);  
-    schedule = true; 
-  }  
+    Alarm.alarmRepeat(0,0,0, syncSchedule);
+    schedule = true;
+  }
 }
 
 BLYNK_WRITE(V11)
@@ -863,127 +1006,4 @@ void upintheair()
   }
   httpClient.end();
   // ESPhttpUpdate.update("www.ogonan.com", 80, "/ogoupdate/ogoswitch_blynk.ino.d1_mini.bin");
-}
-
-
-void setup() {
-  // put your setup code here, to run once:
-
-  Serial.begin(115200);
-  pinMode(relayPin, OUTPUT);
-  pinMode(D4, OUTPUT);
-  pinMode(statusPin, INPUT);
-  pinMode(buzzer, OUTPUT);
-  // t_settime.every(5000, takeSettingTime);
-  setTime(0,0,0,1,1,18);
-
-  Serial.println();
-  Serial.print("Ogoswitch version ");
-  Serial.println(LASTUPDATE);
-  Serial.print("Free space: ");
-  Serial.println(ESP.getFreeSketchSpace());
-  Serial.print("My room: ");
-  Serial.println(myRoom);
-
-
-  setup_wifi();
-
-  /*
-   * mqtt version
-   *
-   *
-   */
-
-  #ifdef MQTT
-
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
-  if (client.connect(myRoom, mqtt_user, mqtt_password)) {
-    client.publish(room_status,"hello world");
-    client.subscribe(myRoom);
-    client.subscribe(room_start);
-    client.subscribe(room_stop);
-    client.subscribe(room_currenttime);
-  }
-  #endif
-
-
-  delay(500);
-
-  // web update OTA
-  String host_update_name;
-  host_update_name = "ogoswitch-"+String(ESP.getChipId());
-  MDNS.begin(host_update_name.c_str());
-  httpUpdater.setup(&httpServer, update_path, update_username, update_password);
-  httpServer.begin();
-  MDNS.addService("http", "tcp", 80);
-  Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host_update_name.c_str(), update_path, update_username, update_password);
-
-  Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
-  boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
-  Serial.print("Blynk connect : ");
-  Serial.println(result);
-  if(!Blynk.connected()){
-    Serial.println("Not connected to Blynk server");
-    Blynk.connect(3333);  // try to connect to server with default timeout
-  }
-  else {
-    Serial.println("Connected to Blynk server");
-  }
-  
-  
-  buzzer_sound();
-  digitalWrite(BUILTIN_LED, LOW);  // turn on LED with voltage HIGH
-  delay(200);                      // wait one second
-  digitalWrite(BUILTIN_LED, HIGH);   // turn off LED with voltage LOW
-  delay(200);
-
-  time_t t = now();
-  Serial.print("start time: ");
-  Serial.print(second(t));
-  Serial.println();
-
-  setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
-  timerStatus.setInterval(1000L, d1Status);
-  
-  // timerStatus.setInterval(1000L, syncSchedule);
-  checkConnectionTimer.setInterval(300000L, checkBlynkConnection);
-  checkFirmware.every(86400000L, upintheair);
-  upintheair();
-  
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
-  //if (WiFi.status() != WL_CONNECTED) {
-  //  setup_wifi();
-  //}
-  // else {
-  //   if (!client.connected()) {
-  //     reconnect();
-  //   }
-  // }
-  httpServer.handleClient();
-
-  // client.loop();
-  if (Blynk.connected()) {
-    Blynk.run();
-  }
-
-  timerStatus.run();
-  checkConnectionTimer.run();
-  checkFirmware.update();
-
-  //t_settime.update();
-  currenttime = (unsigned long) now();
-  checkvalidtime();
-  if(!ON) {
-    blink();
-  }
-  else {
-    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin
-  }
-
-  Alarm.delay(0);
 }

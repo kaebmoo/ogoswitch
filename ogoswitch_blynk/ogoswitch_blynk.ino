@@ -51,8 +51,8 @@ const char* host = "ogoswitch-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
-const int FW_VERSION = 4; // 20180326
-const char* LASTUPDATE = "4.20180326";
+const int FW_VERSION = 5; 
+const char* LASTUPDATE = "5.20180513";
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 ESP8266WebServer httpServer(80);
@@ -399,7 +399,7 @@ void relay(boolean set)
     Serial.print(room_status);
     Serial.println(" : OFF");
     buzzer_sound();
-    Blynk.syncVirtual(V10);
+    Blynk.syncVirtual(V10);         // sync schedule start stop time after timer end
 
     digitalWrite(BUILTIN_LED, LOW);
     delay(500);
@@ -796,6 +796,9 @@ BLYNK_WRITE(V10)
   struct tm c_time;
   time_t t_of_day;
 
+  if (TIMER == true && digitalRead(relayPin)) {
+    return;
+  }
   // Process start time
 
   if (t.hasStartTime())

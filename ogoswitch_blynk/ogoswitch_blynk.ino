@@ -52,7 +52,7 @@ const char* host = "ogoswitch-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
-const int FW_VERSION = 5; 
+const int FW_VERSION = 5;
 const char* LASTUPDATE = "5.20180513";
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
@@ -177,13 +177,13 @@ void setup() {
   MDNS.addService("http", "tcp", 80);
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host_update_name.c_str(), update_path, update_username, update_password);
 
-  
+
   #ifdef BLYNKLOCAL
   Blynk.config(auth, "ogoservice.ogonan.com", 80);  // in place of Blynk.begin(auth, ssid, pass);
   #else
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
   #endif
-  
+
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
   Serial.print("Blynk connect : ");
   Serial.println(result);
@@ -426,12 +426,14 @@ void setup_wifi()
 
   int saved = eeGetInt(500);
   if (saved == 6550) {
-    strcpy(c_auth, auth);
-    auto_wifi_connect();
+    strcpy(c_auth, auth);    
   }
+  autoWifiConnect();
+  /*
   else {
-    ondemand_wifi_setup();
+    ondemandWifiSetup();
   }
+  */
 
 
 
@@ -464,7 +466,7 @@ void setup_wifi()
 
 }
 
-void auto_wifi_connect()
+void autoWifiConnect()
 {
   WiFiManager wifiManager;
   String APName;
@@ -499,7 +501,7 @@ void auto_wifi_connect()
   }
 }
 
-void ondemand_wifi_setup()
+void ondemandWifiSetup()
 {
   WiFiManager wifiManager;
   String APName;
@@ -949,7 +951,7 @@ BLYNK_WRITE(V11)
 
 BLYNK_WRITE(V12)
 {
-  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
+  int pinValue = param.asInt(); // assigning incoming value from pin V12 to a variable
 
   // process received value
   Serial.print("Received value V12: ");

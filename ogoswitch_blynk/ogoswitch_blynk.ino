@@ -26,6 +26,7 @@ SOFTWARE.
 /* Comment this out to disable prints and save space */
 // #define BLYNK_PRINT Serial
 // #define BLYNK_DEBUG // Optional, this enables lots of prints
+#define BLYNKLOCAL
 
 #include <PubSubClient.h>
 #include <BlynkSimpleEsp8266.h>
@@ -176,7 +177,13 @@ void setup() {
   MDNS.addService("http", "tcp", 80);
   Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login with username '%s' and password '%s'\n", host_update_name.c_str(), update_path, update_username, update_password);
 
+  
+  #ifdef BLYNKLOCAL
+  Blynk.config(auth, "ogoservice.ogonan.com", 80);  // in place of Blynk.begin(auth, ssid, pass);
+  #else
   Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
+  #endif
+  
   boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
   Serial.print("Blynk connect : ");
   Serial.println(result);

@@ -27,6 +27,7 @@ SOFTWARE.
 // #define BLYNK_PRINT Serial
 // #define BLYNK_DEBUG // Optional, this enables lots of prints
 #define BLYNKLOCAL
+#define MQTT
 
 #include <PubSubClient.h>
 #include <BlynkSimpleEsp8266.h>
@@ -71,9 +72,10 @@ bool shouldSaveConfig = false;
 // const char *ssid = "CAT-Mobile";
 const char *ssid = "CAT-Register";
 const char *password = "";
-//const char* mqtt_server = "192.168.43.252";
-const char* mqtt_server = "192.168.2.7";
-//const char* mqtt_server = "192.168.8.50";
+// const char* mqtt_server = "192.168.43.252";
+// const char* mqtt_server = "192.168.2.7";
+// const char* mqtt_server = "192.168.8.50";
+const char* mqtt_server = "db.ogonan.com";
 const int relayPin = D1;
 const int statusPin = D2;
 const int buzzer=D5; //Buzzer control port, default D5
@@ -92,14 +94,14 @@ IPAddress server(192, 168, 9, 1);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-char *mqtt_user = "chang";
-char *mqtt_password = "chang";
+char *mqtt_user = "seal";
+char *mqtt_password = "seal";
 
-char *myRoom = "room/1";                // "room/1"
-char *room_status = "room/1/status";    // "room/1/status"
-char *room_start = "room/1/start";      // "room/1/start"
-char *room_stop = "room/1/stop";        // "room/1/stop"
-char *room_currenttime = "room/1/currenttime";  // "room/1/currenttime"
+char *myRoom = "room/zGpNlJ7rKF";                         // "room/1"
+char *room_status = "room/zGpNlJ7rKF/status";             // "room/1/status"
+char *room_start = "room/zGpNlJ7rKF/start";               // "room/1/start"
+char *room_stop = "room/zGpNlJ7rKF/stop";                 // "room/1/stop"
+char *room_currenttime = "room/zGpNlJ7rKF/currenttime";   // "room/1/currenttime"
 
 int mqtt_reconnect = 0;
 int wifi_reconnect = 0;

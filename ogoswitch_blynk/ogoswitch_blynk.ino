@@ -26,7 +26,7 @@ SOFTWARE.
 /* Comment this out to disable prints and save space */
 // #define BLYNK_PRINT Serial
 // #define BLYNK_DEBUG // Optional, this enables lots of prints
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
 #define MQTT
 
 #include <PubSubClient.h>
@@ -78,9 +78,13 @@ const char *password = "";
 const char* mqtt_server = "db.ogonan.com";
 const int relayPin = D1;
 const int statusPin = D2;
+const int PIR = D3;
 const int buzzer=D5; //Buzzer control port, default D5
 const long interval = 1000;
 int ledState = LOW;
+int PIRState = 0;
+int trigState = 0;
+int pirEvent = 0;
 unsigned long previousMillis = 0;
 
 const int MAXRETRY=4; // 0 - 4
@@ -119,7 +123,7 @@ unsigned long starttime;
 unsigned long stoptime;
 unsigned long currenttime;
 unsigned long topic_currenttime;
-Timer t_settime, checkFirmware;
+Timer t_settime, checkFirmware, pirTimer;
 BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
@@ -131,6 +135,7 @@ void setup() {
 
   Serial.begin(115200);
   pinMode(relayPin, OUTPUT);
+  pinMode(PIR, INPUT);
   pinMode(D4, OUTPUT);
   pinMode(statusPin, INPUT);
   pinMode(buzzer, OUTPUT);
@@ -230,6 +235,20 @@ void loop() {
   //     reconnect();
   //   }
   // }
+
+/*
+  PIRState = digitalRead(PIR);
+  if (PIRState == HIGH) {
+    Serial.println("PIR Trig");
+    if (trigState == 0) {
+      Serial.println("PIR Action: ON");
+      pirAction();
+      trigState = 1;
+    }
+    // digitalWrite(BUILTIN_LED, LOW);  // LED on
+  }
+*/
+
   httpServer.handleClient();
 
   // client.loop();
@@ -240,6 +259,7 @@ void loop() {
   timerStatus.run();
   checkConnectionTimer.run();
   checkFirmware.update();
+  pirTimer.update();
 
   //t_settime.update();
   currenttime = (unsigned long) now();
@@ -253,6 +273,24 @@ void loop() {
 
   Alarm.delay(0);
 }
+
+
+void pirAction()
+{
+  Blynk.virtualWrite(V2, 1);
+  Blynk.syncVirtual(V2);
+  pirEvent = pirTimer.after(15000, doAfterPIRTimer);
+}
+
+void doAfterPIRTimer()
+{
+  Blynk.virtualWrite(V2, 0);
+  Blynk.syncVirtual(V2);
+  pirTimer.stop(pirEvent);
+  trigState = 0;
+  Serial.println("PIR Action: OFF");
+}
+
 
 void buzzer_sound()
 {
@@ -294,7 +332,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     // Switch on the RELAY if an 1 was received as first character
     if ((char)payload[0] == '1') {
-      relay(true);
+      relayOn();
       // force to open ; do not check start time, stop time
       force = true;
       bstart = false;
@@ -302,7 +340,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     } else if ((char)payload[0] == '0') {       // 0 - turn relay off
       // force to close ; do not check start time, stop time
-      relay(false);
+      relayOff();
       force = true;
       bstart = false;
       bstop = false;
@@ -377,6 +415,44 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 
 
+}
+
+void relayOn()
+{
+  ON = true;
+  digitalWrite(relayPin, HIGH);
+  digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+  Blynk.virtualWrite(V2, 1);
+  // but actually the LED is on; this is because
+  // it is acive low on the ESP-01)
+  #ifdef MQTT
+  client.publish(room_status,"ON", true);
+  #endif
+  Serial.print(room_status);
+  Serial.println(" : ON");
+  buzzer_sound();
+  
+}
+
+void relayOff()
+{
+  ON = false;
+
+  digitalWrite(relayPin, LOW);
+  digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+  Blynk.virtualWrite(V2, 0);
+  #ifdef MQTT
+  client.publish(room_status,"OFF", true);
+  #endif
+  Serial.print(room_status);
+  Serial.println(" : OFF");
+  buzzer_sound();
+  Blynk.syncVirtual(V10);         // sync schedule start stop time after timer end
+
+  digitalWrite(BUILTIN_LED, LOW);
+  delay(500);
+  digitalWrite(BUILTIN_LED, HIGH);
+  
 }
 
 void relay(boolean set)
@@ -603,7 +679,7 @@ void checkvalidtime()
     if (bstart && bstop && bcurrent && !force) {
       if ( (currenttime >= starttime) && (currenttime <= stoptime) ) {
         if (!ON) {
-          relay(true);
+          relayOn();
         }
       }
       else if (overlap && TIMER != 1) {
@@ -611,7 +687,7 @@ void checkvalidtime()
           // ON
         if ((currenttime >= starttime) || (currenttime < stoptime) ) {
           if (!ON) {
-            relay(true);
+            relayOn();
           }
         }
         // day 0+1 at midnight currenttime <= starttime
@@ -619,12 +695,12 @@ void checkvalidtime()
           // OFF
         else if (currenttime >= stoptime) {
           if (ON) {
-            relay(false);
+            relayOff();
           }
         }
       }
       else if (ON) {
-        relay(false);
+        relayOff();
       }
 
     }
@@ -761,7 +837,7 @@ BLYNK_WRITE(V2)
   Serial.print("Received value V2: ");
   Serial.println(pinValue);
   if (pinValue == 1 && TIMER == 0) {
-    relay(true);
+    relayOn();
     if (digitalRead(relayPin)) {
       led1.on();
     }
@@ -772,7 +848,7 @@ BLYNK_WRITE(V2)
 
   }
   else if (pinValue == 0) {
-    relay(false);
+    relayOff();
     if(!digitalRead(relayPin)) {
       led1.off();
     }

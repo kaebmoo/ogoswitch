@@ -53,8 +53,8 @@ const char* host = "ogoswitch-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
-const int FW_VERSION = 5;
-const char* LASTUPDATE = "5.20180513";
+const int FW_VERSION = 6; // 6.20181113 5.20180513
+const char* LASTUPDATE = "6.20181113";
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 ESP8266WebServer httpServer(80);

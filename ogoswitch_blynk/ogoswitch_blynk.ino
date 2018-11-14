@@ -869,6 +869,11 @@ void d1Status()
   Serial.print(stoptime);
   Serial.print(" ");
   Serial.println(currenttime);
+
+  scheduleTime0.printState();
+  scheduleTime1.printState();
+  scheduleTime2.printState();
+  scheduleTime3.printState();
 }
 
 void readEEPROM(char* buff, int offset, int len) {

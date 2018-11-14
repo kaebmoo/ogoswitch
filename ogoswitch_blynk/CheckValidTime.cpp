@@ -27,6 +27,15 @@ void CheckValidTime::setState(bool bstart, bool bstop, bool bcurrent, bool force
   Serial.print(_force); Serial.println(" ");
 }
 
+void CheckValidTime::printState()
+{
+  Serial.print("start: "); Serial.print(_bstart); Serial.print(" ");
+  Serial.print("stop: "); Serial.print(_bstop); Serial.print(" ");
+  Serial.print("current: "); Serial.print(_bcurrent); Serial.print(" ");
+  Serial.print("force: "); Serial.print(_force); Serial.println(" ");
+  
+}
+
 void CheckValidTime::setOverlap(int overlap)
 {
   _overlap = overlap;

@@ -13,9 +13,9 @@ class CheckValidTime
     int getRelayState();
     void relayOn();
     void relayOff();
-
-  private:
+    void printState();
     
+  private:
     void check();
     bool _bstart = false;
     bool _bstop = false;

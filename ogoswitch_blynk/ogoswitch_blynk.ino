@@ -224,10 +224,10 @@ void setup() {
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
   timerStatus.setInterval(1000L, d1Status);
-  timerStatus.setInterval(1000L, relayStatus);
+  timerStatus.setInterval(1000L, relayPrintStatus);
 
   // timerStatus.setInterval(1000L, syncSchedule);
-  checkConnectionTimer.setInterval(60000L, checkBlynkConnection);
+  checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   checkBlynkConnection();
   upintheair();
@@ -277,6 +277,7 @@ void loop() {
 
   //t_settime.update();
   currenttime = (unsigned long) now();
+  relayStatus();
   // checkvalidtime();
   if(!ON) {
     blink();
@@ -296,15 +297,6 @@ void relayStatus()
   schedule1 = scheduleTime1.getRelayState();
   schedule2 = scheduleTime2.getRelayState();
   schedule3 = scheduleTime3.getRelayState();
-  Serial.print("Schedule Relay status: ");
-  Serial.print(schedule0);
-  Serial.print(" ");
-  Serial.print(schedule1);
-  Serial.print(" ");
-  Serial.print(schedule2);
-  Serial.print(" ");
-  Serial.println(schedule3);
-  
 
   if (schedule0 || schedule1 || schedule2 || schedule3) {
     if (!ON) {
@@ -316,6 +308,24 @@ void relayStatus()
       relayOff();
     }
   }
+}
+
+void relayPrintStatus()
+{
+  int schedule0, schedule1, schedule2, schedule3;
+
+  schedule0 = scheduleTime0.getRelayState();
+  schedule1 = scheduleTime1.getRelayState();
+  schedule2 = scheduleTime2.getRelayState();
+  schedule3 = scheduleTime3.getRelayState();
+  Serial.print("Schedule Relay status: ");
+  Serial.print(schedule0);
+  Serial.print(" ");
+  Serial.print(schedule1);
+  Serial.print(" ");
+  Serial.print(schedule2);
+  Serial.print(" ");
+  Serial.println(schedule3);
 }
 
 
@@ -491,6 +501,12 @@ void relayOff()
   Serial.print(room_status);
   Serial.println(" : OFF");
   buzzer_sound();
+  Blynk.virtualWrite(V12, 0);
+  TIMER = false;  
+  scheduleTime0.setTimerMode(TIMER);
+  scheduleTime1.setTimerMode(TIMER);
+  scheduleTime2.setTimerMode(TIMER);
+  scheduleTime3.setTimerMode(TIMER);
   Blynk.syncVirtual(V10);         // sync schedule start stop time after timer end
   Blynk.syncVirtual(V20);
   Blynk.syncVirtual(V21);
@@ -714,7 +730,8 @@ BLYNK_WRITE(V1)
 }
 
 int blynkreconnect = 0;
-void checkBlynkConnection() {
+void checkBlynkConnection() 
+{
   int mytimeout;
   bool blynkConnectedResult = false;
 
@@ -929,7 +946,7 @@ BLYNK_WRITE(V2)
     force = true;
     bstart = false;
     bstop = false;
-    
+
   }
   else if (pinValue == 0) {
     relayOff();
@@ -942,7 +959,7 @@ BLYNK_WRITE(V2)
     force = true;
     bstart = false;
     bstop = false;
-    
+
   }
   else if (pinValue == 1 && TIMER == 1) {
     Serial.println("Start in timer mode");
@@ -953,10 +970,14 @@ BLYNK_WRITE(V2)
     starttime = currenttime;
     stoptime = starttime + (timer * 60);
     scheduleTime0.begin(starttime, stoptime);
-    
+    scheduleTime1.begin(starttime, stoptime);
+    scheduleTime2.begin(starttime, stoptime);
+    scheduleTime3.begin(starttime, stoptime);
   }
   scheduleTime0.setState(bstart, bstop, bcurrent, force);
-  
+  scheduleTime1.setState(bstart, bstop, bcurrent, force);
+  scheduleTime2.setState(bstart, bstop, bcurrent, force);
+  scheduleTime3.setState(bstart, bstop, bcurrent, force);
 }
 
 
@@ -974,6 +995,7 @@ BLYNK_WRITE(V10)
   time_t t_of_day;
 
   if (TIMER == true && digitalRead(relayPin)) {
+    Serial.println("TIMER = 1 && Relay ON");
     return;
   }
   // Process start time
@@ -1013,6 +1035,7 @@ BLYNK_WRITE(V10)
   {
     // Do nothing
     bstart = false;
+    starttime = 0;
   }
 
   // Process stop time
@@ -1049,6 +1072,7 @@ BLYNK_WRITE(V10)
   {
     // Do nothing: no stop time was set
     bstop = false;
+    stoptime = 0;
   }
 
   // Process timezone
@@ -1107,8 +1131,12 @@ BLYNK_WRITE(V10)
     Alarm.alarmRepeat(0,0,0, syncSchedule);
     schedule = true;
   }
+  
+  if(bcurrent == false) {
+    scheduleTime0.relayOff();
+  }
   scheduleTime0.begin(starttime, stoptime);
-  scheduleTime0.setState(bstart, bstop, bcurrent, force);
+  scheduleTime0.setState(true, true, bcurrent, false);
   scheduleTime0.setOverlap(overlap);
 
 }
@@ -1126,6 +1154,7 @@ BLYNK_WRITE(V20)
   time_t t_of_day;
 
   if (TIMER == true && digitalRead(relayPin)) {
+    Serial.println("TIMER = 1 && Relay ON");
     return;
   }
   // Process start time
@@ -1165,6 +1194,7 @@ BLYNK_WRITE(V20)
   {
     // Do nothing
     bstart = false;
+    starttime = 0;
   }
 
   // Process stop time
@@ -1201,6 +1231,7 @@ BLYNK_WRITE(V20)
   {
     // Do nothing: no stop time was set
     bstop = false;
+    stoptime = 0;
   }
 
   // Process timezone
@@ -1259,8 +1290,11 @@ BLYNK_WRITE(V20)
     Alarm.alarmRepeat(0,0,0, syncSchedule);
     schedule = true;
   }
+  if(bcurrent == false) {
+    scheduleTime1.relayOff();
+  }
   scheduleTime1.begin(starttime, stoptime);
-  scheduleTime1.setState(bstart, bstop, bcurrent, force);
+  scheduleTime1.setState(true, true, bcurrent, false);
   scheduleTime1.setOverlap(overlap);
 }
 
@@ -1277,6 +1311,7 @@ BLYNK_WRITE(V21)
   time_t t_of_day;
 
   if (TIMER == true && digitalRead(relayPin)) {
+    Serial.println("TIMER = 1 && Relay ON");
     return;
   }
   // Process start time
@@ -1316,6 +1351,7 @@ BLYNK_WRITE(V21)
   {
     // Do nothing
     bstart = false;
+    starttime = 0;
   }
 
   // Process stop time
@@ -1352,6 +1388,7 @@ BLYNK_WRITE(V21)
   {
     // Do nothing: no stop time was set
     bstop = false;
+    stoptime = 0;
   }
 
   // Process timezone
@@ -1410,8 +1447,11 @@ BLYNK_WRITE(V21)
     Alarm.alarmRepeat(0,0,0, syncSchedule);
     schedule = true;
   }
+  if(bcurrent == false) {
+    scheduleTime2.relayOff();
+  }
   scheduleTime2.begin(starttime, stoptime);
-  scheduleTime2.setState(bstart, bstop, bcurrent, force);
+  scheduleTime2.setState(true, true, bcurrent, false);
   scheduleTime2.setOverlap(overlap);
 }
 
@@ -1428,6 +1468,7 @@ BLYNK_WRITE(V22)
   time_t t_of_day;
 
   if (TIMER == true && digitalRead(relayPin)) {
+    Serial.println("TIMER = 1 && Relay ON");
     return;
   }
   // Process start time
@@ -1467,6 +1508,7 @@ BLYNK_WRITE(V22)
   {
     // Do nothing
     bstart = false;
+    starttime = 0;
   }
 
   // Process stop time
@@ -1503,6 +1545,7 @@ BLYNK_WRITE(V22)
   {
     // Do nothing: no stop time was set
     bstop = false;
+    stoptime = 0;
   }
 
   // Process timezone
@@ -1561,8 +1604,11 @@ BLYNK_WRITE(V22)
     Alarm.alarmRepeat(0,0,0, syncSchedule);
     schedule = true;
   }
+  if(bcurrent == false) {
+    scheduleTime3.relayOff();
+  }
   scheduleTime3.begin(starttime, stoptime);
-  scheduleTime3.setState(bstart, bstop, bcurrent, force);
+  scheduleTime3.setState(true, true, bcurrent, false);
   scheduleTime3.setOverlap(overlap);
 }
 
@@ -1582,12 +1628,31 @@ BLYNK_WRITE(V12)
   // process received value
   Serial.print("Received value V12: ");
   Serial.println(pinValue);
+
+  if (digitalRead(relayPin) && TIMER == false) {
+    Blynk.virtualWrite(V12, 0);
+    return;
+  }
+
+  if (digitalRead(relayPin) && TIMER == true) {
+    Blynk.virtualWrite(V12, 1);
+    return;
+  }
+
   if (pinValue == 1) {
-    TIMER = true;
+    
+    TIMER = true; 
+    
   }
   else {
     TIMER = false;
   }
+  scheduleTime0.setTimerMode(TIMER);
+  scheduleTime1.setTimerMode(TIMER);
+  scheduleTime2.setTimerMode(TIMER);
+  scheduleTime3.setTimerMode(TIMER);
+  Serial.print("TIMER : ");
+  Serial.println(TIMER);
 }
 
 

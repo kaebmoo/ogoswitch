@@ -53,7 +53,7 @@ const char* host = "ogoswitch-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "ogoswitch";
-const int FW_VERSION = 6; // 6.20181113 5.20180513
+const int FW_VERSION = 7; // 7.20181115 6.20181113 5.20180513
 const char* LASTUPDATE = "6.20181113";
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
@@ -502,7 +502,7 @@ void relayOff()
   Serial.println(" : OFF");
   buzzer_sound();
   Blynk.virtualWrite(V12, 0);
-  TIMER = false;  
+  TIMER = false;
   scheduleTime0.setTimerMode(TIMER);
   scheduleTime1.setTimerMode(TIMER);
   scheduleTime2.setTimerMode(TIMER);
@@ -730,7 +730,7 @@ BLYNK_WRITE(V1)
 }
 
 int blynkreconnect = 0;
-void checkBlynkConnection() 
+void checkBlynkConnection()
 {
   int mytimeout;
   bool blynkConnectedResult = false;
@@ -944,6 +944,9 @@ BLYNK_WRITE(V2)
   if (pinValue == 1 && TIMER == 0) {
     relayOn();
     scheduleTime0.relayOn();
+    scheduleTime1.relayOn();
+    scheduleTime2.relayOn();
+    scheduleTime3.relayOn();
     if (digitalRead(relayPin)) {
       led1.on();
     }
@@ -956,6 +959,9 @@ BLYNK_WRITE(V2)
   else if (pinValue == 0) {
     relayOff();
     scheduleTime0.relayOff();
+    scheduleTime1.relayOff();
+    scheduleTime2.relayOff();
+    scheduleTime3.relayOff();
     if(!digitalRead(relayPin)) {
       led1.off();
     }
@@ -1136,7 +1142,7 @@ BLYNK_WRITE(V10)
     Alarm.alarmRepeat(0,0,0, syncSchedule);
     schedule = true;
   }
-  
+
   if(bcurrent == false) {
     scheduleTime0.relayOff();
   }
@@ -1645,9 +1651,9 @@ BLYNK_WRITE(V12)
   }
 
   if (pinValue == 1) {
-    
-    TIMER = true; 
-    
+
+    TIMER = true;
+
   }
   else {
     TIMER = false;

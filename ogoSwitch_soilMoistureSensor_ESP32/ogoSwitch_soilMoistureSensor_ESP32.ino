@@ -1,16 +1,31 @@
-#include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+#include <WiFi.h>
+// #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
-#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+// #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+// #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
 #include <WiFiClient.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266HTTPUpdateServer.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266httpUpdate.h>
+// #include <ESP8266mDNS.h>
+// #include <ESP8266HTTPUpdateServer.h>
+// #include <ESP8266HTTPClient.h>
+// #include <ESP8266httpUpdate.h>
 
 #include <EEPROM.h>
-#include <BlynkSimpleEsp8266.h>
+// #include <BlynkSimpleEsp8266.h>
+#include <BlynkSimpleEsp32.h>
+#include "ConfigManager.h"
+
+struct Config {
+    char auth[64];
+    char ssid[32];
+    char password[64];
+} config;
+
+struct Metadata {
+    int8_t version;
+} meta;
+
+ConfigManager configManager;
 
 #define BLYNKLOCAL
 
@@ -22,9 +37,9 @@ char c_auth[33] = "12345678901234567890abcdefghijkl";           // authen token 
 bool shouldSaveConfig = false;
 
 
-#define TRIGGER_PIN D3                      // GPIO 0
-const int analogReadPin = A0;               // read for set options Soil Moisture or else ...
-const int RELAY1 = D1;                      // GPIO 5
+#define TRIGGER_PIN 0                       // D3
+const int analogReadPin = 32;               // read for set options Soil Moisture or else ...
+const int RELAY1 = 5;                       // D1
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
@@ -47,10 +62,32 @@ void setup() {
   pinMode(RELAY1, OUTPUT);
   pinMode(BUILTIN_LED, OUTPUT);
   pinMode(TRIGGER_PIN, INPUT);
+  meta.version = 1;
+
+  configManager.setAPName("ogoswitch");
+  configManager.setAPFilename("/index.html");
+  configManager.addParameter("auth", config.auth, 64);
+  configManager.addParameter("ssid", config.ssid, 32);
+  configManager.addParameter("password", config.password, 64);
+  configManager.addParameter("version", &meta.version, get);
+  configManager.begin(config);
+
+  configManager.setAPCallback(createCustomRoute);
+  configManager.setAPICallback(createCustomRoute);
+
+  Serial.print("auth from config: ");
+  Serial.println(config.auth);
+  Serial.print("ssid from config: ");
+  Serial.println(config.ssid);
+  Serial.print("password from config: ");
+  Serial.println(config.password);
+
+  strcpy(auth, config.auth);
+  
   digitalWrite(RELAY1, 0);
   delay(1000);
-  readConfig();
-  wifiConnect();
+  // readConfig();
+  // wifiConnect();
   if (offline == 0) {
     #ifdef BLYNKLOCAL
     Blynk.config(auth, "blynk.ogonan.com", 80);  // in place of Blynk.begin(auth, ssid, pass);
@@ -73,6 +110,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  configManager.loop();
   soilMoistureSensor();
   delay(1000);
   blink();
@@ -143,7 +182,7 @@ void wifiConnect()
     delay(500);
     Serial.print("1");
     if ( digitalRead(TRIGGER_PIN) == LOW ) {
-      ondemandWiFi();
+      // ondemandWiFi();
     }
     retry2Connect++;
     if (retry2Connect >= 30) {
@@ -180,6 +219,7 @@ void wifiConnect()
   }
 }
 
+/*
 void ondemandWiFi()
 {
   WiFiManager wifiManager;
@@ -209,6 +249,7 @@ void ondemandWiFi()
     eeWriteInt(500, 6550);
   }
 }
+*/
 
 //callback notifying us of the need to save config
 void saveConfigCallback () {
@@ -328,4 +369,10 @@ BLYNK_WRITE(V2)
 BLYNK_READ(V10)
 {
   Blynk.virtualWrite(V10, mappedValue);
+}
+
+void createCustomRoute(WebServer *server) {
+    server->on("/custom", HTTPMethod::HTTP_GET, [server](){
+        server->send(200, "text/plain", "Hello, World!");
+    });
 }

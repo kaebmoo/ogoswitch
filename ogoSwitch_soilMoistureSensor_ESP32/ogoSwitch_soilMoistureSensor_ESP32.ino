@@ -14,11 +14,12 @@
 // #include <BlynkSimpleEsp8266.h>
 #include <BlynkSimpleEsp32.h>
 #include "ConfigManager.h"
+#include "mdns.h"
 
 struct Config {
     char auth[64];
-    char ssid[32];
-    char password[64];
+    // char ssid[32];
+    // char password[64];
 } config;
 
 struct Metadata {
@@ -56,6 +57,8 @@ int offline = 0;
 BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(20);
 
+char hostString[16] = {0};
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -64,11 +67,11 @@ void setup() {
   pinMode(TRIGGER_PIN, INPUT);
   meta.version = 1;
 
-  configManager.setAPName("ogoswitch");
+  configManager.setAPName("ogosense");
   configManager.setAPFilename("/index.html");
   configManager.addParameter("auth", config.auth, 64);
-  configManager.addParameter("ssid", config.ssid, 32);
-  configManager.addParameter("password", config.password, 64);
+  // configManager.addParameter("ssid", config.ssid, 32);
+  // configManager.addParameter("password", config.password, 64);
   configManager.addParameter("version", &meta.version, get);
   configManager.begin(config);
 
@@ -77,10 +80,10 @@ void setup() {
 
   Serial.print("auth from config: ");
   Serial.println(config.auth);
-  Serial.print("ssid from config: ");
-  Serial.println(config.ssid);
-  Serial.print("password from config: ");
-  Serial.println(config.password);
+  // Serial.print("ssid from config: ");
+  // Serial.println(config.ssid);
+  // Serial.print("password from config: ");
+  // Serial.println(config.password);
 
   strcpy(auth, config.auth);
   
@@ -106,6 +109,20 @@ void setup() {
     }
     checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
   }
+
+  // sprintf(hostString, "esp-%06d", ESP.getChipId());
+  sprintf(hostString, "ogosense");
+  Serial.print("My Hostname: ");
+  Serial.println(hostString);
+  WiFi.setHostname(hostString); // ESP32
+
+  esp_err_t err = mdns_init();
+  if (err) {
+      printf("MDNS Init failed: %d\n", err);
+  }
+  //set hostname
+  mdns_hostname_set("ogosense");
+   
 }
 
 void loop() {

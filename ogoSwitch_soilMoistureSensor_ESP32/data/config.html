@@ -85,21 +85,33 @@
             }
         </style>
         <title>ConfigManager</title>
+        <script type="text/javascript">
+          function submitform() {
+              var formData = JSON.stringify($("#configForm").serializeArray());
+
+              $.ajax({
+                type: "POST",
+                url: "/settings",
+                data: formData,
+                success: function(){},
+                dataType: "json",
+                contentType : "application/json"
+              });
+          }
+
+        </script>
     </head>
     <body>
         <div class="container">
             <h1 style="text-align: center;">Wifi Details</h1>
-            <form method="post" action="/">
+            <form method="post" action="/" name="configForm">
                 <div class="field-group">
-                    <label>SSID</label>
-                    <input name="ssid" type="text" size="32">
+                    <label>Blynk Auth</label>
+                    <input name="auth" type="text" size="32">
                 </div>
-                <div class="field-group">
-                    <label>Password</label>
-                    <input name="password" type="text" size="64">
-                </div>
+
                 <div class="button-container">
-                    <button type="submit">Save</button>
+                    <button type="submit" onclick="submitform()">Save</button>
                 </div>
             </form>
         </div>

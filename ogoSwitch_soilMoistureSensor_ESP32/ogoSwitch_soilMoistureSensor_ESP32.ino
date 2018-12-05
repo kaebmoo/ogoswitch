@@ -39,14 +39,18 @@ bool shouldSaveConfig = false;
 
 
 #define TRIGGER_PIN 0                       // D3
-const int analogReadPin = 32;               // read for set options Soil Moisture or else ...
-const int RELAY1 = 5;                       // D1
+const int analogReadPin1 = 32;               // read for set options Soil Moisture or else ...
+const int analogReadPin2 = 33;               // read for set options Soil Moisture or else ...
+const int analogReadPin3 = 34;               // read for set options Soil Moisture or else ...
+const int RELAY1 = 15;                       // 5 = D1
+const int RELAY2 = 16;                       // 
+const int RELAY3 = 17;                       // 
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
-int maxADC = 928;                     // replace with max ADC value read fully submerged in water
+int maxADC = 3440;                     // replace with max ADC value read fully submerged in water
 int soilMoistureSetPoint = 50;
-int soilMoisture, mappedValue;
+int soilMoisture, mappedValue1, mappedValue2, mappedValue3;
 int range = 20;
 
 const long interval = 1000;
@@ -54,8 +58,10 @@ int ledState = LOW;
 unsigned long previousMillis = 0;
 
 int offline = 0;
-BlynkTimer timerStatus, checkConnectionTimer;
+BlynkTimer timerStatus, timerCheckConnection;
 WidgetLED led1(20);
+WidgetLED led2(21);
+WidgetLED led3(22);
 
 char hostString[16] = {0};
 
@@ -65,6 +71,7 @@ void setup() {
   pinMode(RELAY1, OUTPUT);
   pinMode(BUILTIN_LED, OUTPUT);
   pinMode(TRIGGER_PIN, INPUT);
+  
   meta.version = 1;
 
   configManager.setAPName("ogosense");
@@ -107,7 +114,7 @@ void setup() {
     else {
       Serial.println("Connected to Blynk server");
     }
-    checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
+    timerCheckConnection.setInterval(15000L, checkBlynkConnection);
   }
 
   // sprintf(hostString, "esp-%06d", ESP.getChipId());
@@ -122,45 +129,54 @@ void setup() {
   }
   //set hostname
   mdns_hostname_set("ogosense");
-   
+
+  timerStatus.setInterval(1000L, soilMoistureSensor);
+  soilMoistureSensor();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
   configManager.loop();
-  soilMoistureSensor();
+  // soilMoistureSensor();
   delay(1000);
   blink();
 
   if (Blynk.connected()) {
     Blynk.run();
   }
-  checkConnectionTimer.run();
-  
+  timerCheckConnection.run();
+  timerStatus.run();
 }
 
 void soilMoistureSensor()
 {
-  soilMoisture = analogRead(analogReadPin);
-  Serial.print("Analog Read : ");
+  soilMoistureSensor1();
+  soilMoistureSensor2();
+  soilMoistureSensor3();
+}
+
+void soilMoistureSensor1()
+{
+  soilMoisture = analogRead(analogReadPin1);
+  Serial.print("Analog Read 1 : ");
   Serial.print(soilMoisture);
   Serial.print(", " );
 
-  mappedValue = map(soilMoisture, minADC, maxADC, 0, 100);
+  mappedValue1 = map(soilMoisture, minADC, maxADC, 0, 100);
 
 
   // print mapped results to the serial monitor:
-  Serial.print("Moisture value = " );
-  Serial.println(mappedValue);
+  Serial.print("Moisture value 1 = " );
+  Serial.println(mappedValue1);
 
-  if (mappedValue > (soilMoistureSetPoint + range)) {
+  if (mappedValue1 > (soilMoistureSetPoint + range)) {
     Serial.println("High Moisture");
     Serial.println("Soil Moisture: Turn Relay Off");
     digitalWrite(RELAY1, LOW);
     led1.off();
   }
-  else if (mappedValue < (soilMoistureSetPoint - range)) {
+  else if (mappedValue1 < (soilMoistureSetPoint - range)) {
     Serial.println("Low Moisture");
     Serial.println("Soil Moisture: Turn Relay On");
     digitalWrite(RELAY1, HIGH);
@@ -168,6 +184,61 @@ void soilMoistureSensor()
   }
 }
 
+void soilMoistureSensor2()
+{
+  soilMoisture = analogRead(analogReadPin2);
+  Serial.print("Analog Read 2 : ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+
+  mappedValue2 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value 2 = " );
+  Serial.println(mappedValue2);
+
+  if (mappedValue2 > (soilMoistureSetPoint + range)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    digitalWrite(RELAY2, LOW);
+    led2.off();
+  }
+  else if (mappedValue2 < (soilMoistureSetPoint - range)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    digitalWrite(RELAY2, HIGH);
+    led2.on();
+  }
+}
+
+void soilMoistureSensor3()
+{
+  soilMoisture = analogRead(analogReadPin3);
+  Serial.print("Analog Read 3 : ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+
+  mappedValue3 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value 3 = " );
+  Serial.println(mappedValue3);
+
+  if (mappedValue3 > (soilMoistureSetPoint + range)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    digitalWrite(RELAY3, LOW);
+    led3.off();
+  }
+  else if (mappedValue3 < (soilMoistureSetPoint - range)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    digitalWrite(RELAY3, HIGH);
+    led3.on();
+  }
+}
 void blink()
 {
   unsigned long currentMillis = millis();
@@ -385,7 +456,17 @@ BLYNK_WRITE(V2)
 
 BLYNK_READ(V10)
 {
-  Blynk.virtualWrite(V10, mappedValue);
+  Blynk.virtualWrite(V10, mappedValue1);
+}
+
+BLYNK_READ(V11)
+{
+  Blynk.virtualWrite(V11, mappedValue2);
+}
+
+BLYNK_READ(V12)
+{
+  Blynk.virtualWrite(V12, mappedValue3);
 }
 
 void createCustomRoute(WebServer *server) {

@@ -37,6 +37,7 @@ SOFTWARE.
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
+#include <ESP8266WiFiMulti.h>
 
 #include <WiFiClient.h>
 #include <ESP8266mDNS.h>
@@ -49,6 +50,7 @@ SOFTWARE.
 #include <ThingSpeak.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+
 
 // #define BLYNKLOCAL
 #define SLEEP
@@ -129,6 +131,7 @@ int mqtt_reconnect = 0;
 
 WiFiClient client;
 PubSubClient mqttClient(client);
+ESP8266WiFiMulti wifiMulti;
 #ifdef SLEEP
   // sleep for this many seconds default is 300 (5 minutes)
   const int sleepSeconds = 15;
@@ -298,16 +301,37 @@ void blink()
 void wifiConnect()
 {
   int retry2Connect = 0;
-
+  String SSID = WiFi.SSID();
+  String PSK = WiFi.psk();
+  
+  WiFi.mode(WIFI_STA);
   Serial.println();
   Serial.println(WiFi.SSID());
   Serial.println(WiFi.psk());
-  String SSID = WiFi.SSID();
-  String PSK = WiFi.psk();
+  
   WiFi.begin();
   Serial.print("Connecting");
   Serial.println();
 
+  wifiMulti.addAP("Red", "12345678");
+  wifiMulti.addAP("ogofarm", "ogofarm2018");
+  wifiMulti.addAP("Red_Plus", "12345678");
+
+  Serial.println("Connecting Wifi...");
+
+  while (wifiMulti.run() != WL_CONNECTED) {
+    delay(500);
+    Serial.print("1");
+    if ( digitalRead(TRIGGER_PIN) == LOW ) {
+      ondemandWiFi();
+    }
+    retry2Connect++;
+    if (retry2Connect >= 30) {
+      offline = 1;
+      break;
+    }
+  }
+  /*
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
@@ -342,11 +366,17 @@ void wifiConnect()
       break;
     }
   }
+  */
+  
+  
+  
   Serial.println();
   if (offline == 0) {
     Serial.print("Connected, IP address: ");
     Serial.println(WiFi.localIP());
   }
+  
+  Serial.println();
 }
 
 void ondemandWiFi()

@@ -19,13 +19,13 @@
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "12345678901234567890abcdefghijkl";
-char c_auth[33] = "12345678901234567890abcdefghijkl";           // authen token blynk
+char auth[] = "634021991b694e08b004ca8b13f08bc1";
+char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
 //flag for saving data
 bool shouldSaveConfig = false;
 
 
-#define TRIGGER_PIN 18                        // GPIO 
+#define TRIGGER_PIN 2                        // GPIO 
 const int analogReadPin1 = 32;               // read for set options Soil Moisture or else ...
 const int analogReadPin2 = 33;               // read for set options Soil Moisture or else ...
 const int analogReadPin3 = 34;               // read for set options Soil Moisture or else ...
@@ -36,9 +36,13 @@ const int RELAY3 = 17;                       //
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
 int maxADC = 3440;                     // replace with max ADC value read fully submerged in water
-int soilMoistureSetPoint = 50;
+int soilMoistureSetPoint1 = 50;
+int soilMoistureSetPoint2 = 50;
+int soilMoistureSetPoint3 = 50;
 int soilMoisture, mappedValue1, mappedValue2, mappedValue3;
-int range = 20;
+int range1 = 20;
+int range2 = 20;
+int range3 = 20;
 
 const long interval = 1000;
 int ledState = LOW;
@@ -130,13 +134,13 @@ void soilMoistureSensor1()
   Serial.print("Moisture value 1 = " );
   Serial.println(mappedValue1);
 
-  if (mappedValue1 > (soilMoistureSetPoint + range)) {
+  if (mappedValue1 > (soilMoistureSetPoint1 + range1)) {
     Serial.println("High Moisture");
     Serial.println("Soil Moisture: Turn Relay Off");
     digitalWrite(RELAY1, LOW);
     led1.off();
   }
-  else if (mappedValue1 < (soilMoistureSetPoint - range)) {
+  else if (mappedValue1 < (soilMoistureSetPoint1 - range1)) {
     Serial.println("Low Moisture");
     Serial.println("Soil Moisture: Turn Relay On");
     digitalWrite(RELAY1, HIGH);
@@ -158,13 +162,13 @@ void soilMoistureSensor2()
   Serial.print("Moisture value 2 = " );
   Serial.println(mappedValue2);
 
-  if (mappedValue2 > (soilMoistureSetPoint + range)) {
+  if (mappedValue2 > (soilMoistureSetPoint2 + range2)) {
     Serial.println("High Moisture");
     Serial.println("Soil Moisture: Turn Relay Off");
     digitalWrite(RELAY2, LOW);
     led2.off();
   }
-  else if (mappedValue2 < (soilMoistureSetPoint - range)) {
+  else if (mappedValue2 < (soilMoistureSetPoint2 - range2)) {
     Serial.println("Low Moisture");
     Serial.println("Soil Moisture: Turn Relay On");
     digitalWrite(RELAY2, HIGH);
@@ -186,13 +190,13 @@ void soilMoistureSensor3()
   Serial.print("Moisture value 3 = " );
   Serial.println(mappedValue3);
 
-  if (mappedValue3 > (soilMoistureSetPoint + range)) {
+  if (mappedValue3 > (soilMoistureSetPoint3 + range3)) {
     Serial.println("High Moisture");
     Serial.println("Soil Moisture: Turn Relay Off");
     digitalWrite(RELAY3, LOW);
     led3.off();
   }
-  else if (mappedValue3 < (soilMoistureSetPoint - range)) {
+  else if (mappedValue3 < (soilMoistureSetPoint3 - range3)) {
     Serial.println("Low Moisture");
     Serial.println("Soil Moisture: Turn Relay On");
     digitalWrite(RELAY3, HIGH);
@@ -230,7 +234,7 @@ void wifiConnect()
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
-    if ( digitalRead(TRIGGER_PIN) == LOW ) {
+    if ( digitalRead(TRIGGER_PIN) == HIGH ) {
       ondemandWiFi();
     }
     retry2Connect++;
@@ -395,21 +399,57 @@ BLYNK_CONNECTED()
 {
   Blynk.syncVirtual(V1);
   Blynk.syncVirtual(V2);
+  Blynk.syncVirtual(V3);
+  Blynk.syncVirtual(V4);
+  Blynk.syncVirtual(V5);
+  Blynk.syncVirtual(V6);
 }
 
 BLYNK_WRITE(V1)
 {
-  soilMoistureSetPoint = param.asInt();
+  soilMoistureSetPoint1 = param.asInt();
   Serial.print("Set point: ");
-  Serial.println(soilMoistureSetPoint);
+  Serial.println(soilMoistureSetPoint1);
   Serial.println();
 }
 
 BLYNK_WRITE(V2)
 {
-  range = param.asInt();
+  range1 = param.asInt();
   Serial.print("Range: ");
-  Serial.println(range);
+  Serial.println(range1);
+  Serial.println();
+}
+
+BLYNK_WRITE(V3)
+{
+  soilMoistureSetPoint1 = param.asInt();
+  Serial.print("Set point: ");
+  Serial.println(soilMoistureSetPoint1);
+  Serial.println();
+}
+
+BLYNK_WRITE(V4)
+{
+  range1 = param.asInt();
+  Serial.print("Range: ");
+  Serial.println(range1);
+  Serial.println();
+}
+
+BLYNK_WRITE(V5)
+{
+  soilMoistureSetPoint1 = param.asInt();
+  Serial.print("Set point: ");
+  Serial.println(soilMoistureSetPoint1);
+  Serial.println();
+}
+
+BLYNK_WRITE(V6)
+{
+  range1 = param.asInt();
+  Serial.print("Range: ");
+  Serial.println(range1);
   Serial.println();
 }
 

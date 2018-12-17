@@ -55,7 +55,7 @@ SOFTWARE.
 // #define BLYNKLOCAL
 #define SLEEP
 #define THINGSBOARD
-#// define THINGSPEAK
+// #define THINGSPEAK
 
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
@@ -86,9 +86,11 @@ char c_sendinterval[8] = "10000";
 char auth[] = "634021991b694e08b004ca8b13f08bc1";
 char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
 char c_writeAPIKey[17] = "";                                    // write api key thingspeak
+char c_sleepSeconds[8] = "300";
+
 //flag for saving data
 bool shouldSaveConfig = false;
-int sendinterval = 10000;                                       // send data interval time
+int sendinterval = 60;                                       // send data interval time in second
 
 
 #define TRIGGER_PIN D3                      // GPIO 0
@@ -134,7 +136,7 @@ PubSubClient mqttClient(client);
 ESP8266WiFiMulti wifiMulti;
 #ifdef SLEEP
   // sleep for this many seconds default is 300 (5 minutes)
-  const int sleepSeconds = 15;
+  int sleepSeconds = 15;
 #endif
 
 
@@ -179,13 +181,16 @@ void setup() {
     
     #ifdef THINGSPEAK
     ThingSpeak.begin( client );
-    timerStatus.setInterval(300000L, sendThingSpeak);
+    timerStatus.setInterval(sendinterval * 1000, sendThingSpeak);
     #endif
     #ifdef THINGSBOARD
     setup_mqtt();
-    timerStatus.setInterval(300000L, sendSoilMoistureData);
+    timerStatus.setInterval(sendinterval * 1000, sendSoilMoistureData);
     #endif
+
+    #if defined(BLYNKLOCAL) || defined(BLYNK)
     checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
+    #endif
 
     #ifdef SLEEP
       soilMoistureSensor();
@@ -201,10 +206,11 @@ void setup() {
       }
       sendSoilMoistureData();
       #endif
-
+    
     Serial.println("I'm going to sleep.");
     Serial.println("Goodnight folks!");
-    delay(1000);
+    
+    delay(15000);
     ESP.deepSleep(sleepSeconds * 1000000);
     #endif
   }
@@ -212,6 +218,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  wifiMulti.run();
   if ( !mqttClient.connected() ) {
     reconnect();
   }
@@ -392,6 +400,9 @@ void ondemandWiFi()
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   WiFiManagerParameter custom_thingsboard_token("token", "thingsboard token", c_token, 32);
   WiFiManagerParameter custom_c_writeapikey("c_writeapikey", "Write API Key : ThingSpeak", c_writeAPIKey, 17);
+  #ifdef SLEEP
+  WiFiManagerParameter custom_c_sleepSeconds("c_sleepSeconds", "Sleep Interval (second)", c_sleepSeconds, 7);
+  #endif
 
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_mqtt_server);
@@ -400,6 +411,9 @@ void ondemandWiFi()
   wifiManager.addParameter(&custom_c_auth);
   wifiManager.addParameter(&custom_thingsboard_token);
   wifiManager.addParameter(&custom_c_writeapikey);
+  #ifdef SLEEP
+  wifiManager.addParameter(&custom_c_sleepSeconds);
+  #endif
 
   delay(10);
 
@@ -421,6 +435,9 @@ void ondemandWiFi()
     strcpy(c_sendinterval, custom_sendinterval.getValue());
     strcpy(c_auth, custom_c_auth.getValue());
     strcpy(c_writeAPIKey, custom_c_writeapikey.getValue());
+    #ifdef SLEEP
+    strcpy(c_sleepSeconds, custom_c_sleepSeconds.getValue());
+    #endif
 
     strcpy(thingsboardServer, c_thingsboardServer);
     mqttport = atoi(c_mqttport);
@@ -428,6 +445,9 @@ void ondemandWiFi()
     sendinterval = atoi(c_sendinterval);
     strcpy(auth, c_auth);
     strcpy(writeAPIKey, c_writeAPIKey);
+    #ifdef SLEEP
+    sleepSeconds = atoi(c_sleepSeconds);
+    #endif
 
     Serial.print("thingsboard server: ");
     Serial.println(c_thingsboardServer);
@@ -441,6 +461,10 @@ void ondemandWiFi()
     Serial.println(auth);
     Serial.print("Thinspeak write API Key : ");
     Serial.println(writeAPIKey);
+    #ifdef SLEEP
+    Serial.println("Sleep interval : ");
+    Serial.print(c_sleepSeconds);
+    #endif
 
     writeEEPROM(thingsboardServer, 0, 40);
     writeEEPROM(c_mqttport, 40, 7);
@@ -448,6 +472,9 @@ void ondemandWiFi()
     writeEEPROM(auth, 60, 32);
     writeEEPROM(token, 92, 20);
     writeEEPROM(writeAPIKey, 112, 16);
+    #ifdef SLEEP
+    eeWriteInt(144, sleepSeconds);
+    #endif
     eeWriteInt(500, 6550);
   }
 }
@@ -467,6 +494,9 @@ void readConfig()
   memset(auth, 0, sizeof(auth));
   memset(token, 0, sizeof(token));
   memset(writeAPIKey, 0, sizeof(writeAPIKey));
+  #ifdef SLEEP
+  memset(c_sleepSeconds, 0, sizeof(c_sleepSeconds));
+  #endif
   
   readEEPROM(thingsboardServer, 0, 40);
   readEEPROM(c_mqttport, 40, 7);
@@ -475,6 +505,9 @@ void readConfig()
   readEEPROM(token, 92, 20);        // thingsboard device token
   readEEPROM(writeAPIKey, 112, 32); // thingspeak write api key
   mqttport = atoi(c_mqttport);
+  #ifdef SLEEP
+  sleepSeconds = eeGetInt(144); 
+  #endif
 
   Serial.println();
   Serial.print("thingsboard server: ");
@@ -487,6 +520,10 @@ void readConfig()
   Serial.println(auth);
   Serial.print("device token: ");
   Serial.println(token);
+  #ifdef SLEEP
+  Serial.print("sleep interval: ");
+  Serial.print(sleepSeconds);
+  #endif
 
 
   int saved = eeGetInt(500);
@@ -497,6 +534,9 @@ void readConfig()
     strcpy(c_token, token);
     strcpy(c_writeAPIKey, writeAPIKey);
     itoa(sendinterval, c_sendinterval, 10);
+    #ifdef SLEEP
+    itoa(sleepSeconds, c_sleepSeconds, 10);
+    #endif
   }
 }
 

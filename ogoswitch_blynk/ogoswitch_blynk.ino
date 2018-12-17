@@ -78,7 +78,7 @@ const char *password = "";
 const char* mqtt_server = "db.ogonan.com";
 const int relayPin = D1;
 const int statusPin = D2;
-const int PIR = D3;
+const int TRIGGER_PIN = D3;
 const int buzzer=D5; //Buzzer control port, default D5
 const long interval = 1000;
 int ledState = LOW;
@@ -143,7 +143,7 @@ void setup() {
 
   Serial.begin(115200);
   pinMode(relayPin, OUTPUT);
-  pinMode(PIR, INPUT);
+  pinMode(TRIGGER_PIN, INPUT);
   pinMode(D4, OUTPUT);
   pinMode(statusPin, INPUT);
   pinMode(buzzer, OUTPUT);
@@ -236,27 +236,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  //if (WiFi.status() != WL_CONNECTED) {
-  //  setup_wifi();
-  //}
-  // else {
-  //   if (!client.connected()) {
-  //     reconnect();
-  //   }
-  // }
-
-/*
-  PIRState = digitalRead(PIR);
-  if (PIRState == HIGH) {
-    Serial.println("PIR Trig");
-    if (trigState == 0) {
-      Serial.println("PIR Action: ON");
-      pirAction();
-      trigState = 1;
-    }
-    // digitalWrite(BUILTIN_LED, LOW);  // LED on
-  }
-*/
+  
 
   httpServer.handleClient();
 
@@ -572,14 +552,25 @@ void setup_wifi()
   if (saved == 6550) {
     strcpy(c_auth, auth);
   }
-  autoWifiConnect();
-  /*
-  else {
-    ondemandWifiSetup();
+
+  WiFi.begin();
+  Serial.print("Connecting");
+  Serial.println();
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+    wifi_reconnect++;
+    if (wifi_reconnect > MAXRETRY) {
+      wifi_reconnect = 0;
+      ondemandWiFi();
+      break;
+    }
+
+    if ( digitalRead(TRIGGER_PIN) == LOW ) {
+      ondemandWiFi();
+    }
   }
-  */
-
-
 
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
@@ -591,30 +582,32 @@ void setup_wifi()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  /*
+  byte mac[6];  // the MAC address of your Wifi shield
   WiFi.macAddress(mac);
   Serial.print("MAC: ");
-  Serial.print(mac[0],HEX);
-  Serial.print(":");
-  Serial.print(mac[1],HEX);
-  Serial.print(":");
-  Serial.print(mac[2],HEX);
-  Serial.print(":");
-  Serial.print(mac[3],HEX);
+  Serial.print(mac[5],HEX);
   Serial.print(":");
   Serial.print(mac[4],HEX);
   Serial.print(":");
-  Serial.println(mac[5],HEX);
-  */
+  Serial.print(mac[3],HEX);
+  Serial.print(":");
+  Serial.print(mac[2],HEX);
+  Serial.print(":");
+  Serial.print(mac[1],HEX);
+  Serial.print(":");
+  Serial.println(mac[0],HEX);
 
 
 }
 
-void autoWifiConnect()
+void ondemandWiFi()
 {
   WiFiManager wifiManager;
   String APName;
 
+  wifiManager.setBreakAfterConfig(true);
+  wifiManager.setConfigPortalTimeout(60);
+  
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.addParameter(&custom_c_auth);
@@ -626,7 +619,7 @@ void autoWifiConnect()
   wifiManager.setTimeout(300);
   APName = "ogoSwitch-"+String(ESP.getChipId());
 
-  if(!wifiManager.autoConnect(APName.c_str()) ) {
+  if(!wifiManager.startConfigPortal(APName.c_str()) ) {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
     //reset and try again, or maybe put it to deep sleep
@@ -645,40 +638,6 @@ void autoWifiConnect()
   }
 }
 
-void ondemandWifiSetup()
-{
-  WiFiManager wifiManager;
-  String APName;
-
-  WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.addParameter(&custom_c_auth);
-  delay(10);
-
-  //sets timeout until configuration portal gets turned off
-  //useful to make it all retry or go to sleep
-  //in seconds
-  wifiManager.setTimeout(300);
-  APName = "ogoSwitch-"+String(ESP.getChipId());
-
-  Serial.println("On demand AP");
-  if (!wifiManager.startConfigPortal(APName.c_str())) {
-    Serial.println("failed to connect and hit timeout");
-    delay(3000);
-    //reset and try again, or maybe put it to deep sleep
-    ESP.reset();
-    delay(5000);
-  }
-  if (shouldSaveConfig) {
-    Serial.println("Saving config...");
-    strcpy(c_auth, custom_c_auth.getValue());
-    strcpy(auth, c_auth);
-    Serial.print("auth token : ");
-    Serial.println(auth);
-    writeEEPROM(auth, 60, 32);
-    eeWriteInt(500, 6550);
-  }
-}
 
 void reconnect() {
   // Loop until we're reconnected

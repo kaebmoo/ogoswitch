@@ -52,9 +52,9 @@ SOFTWARE.
 #include <PubSubClient.h>
 
 
-// #define BLYNKLOCAL
-#define SLEEP
-#define THINGSBOARD
+#define BLYNKLOCAL
+// #define SLEEP
+// #define THINGSBOARD
 // #define THINGSPEAK
 
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
@@ -105,7 +105,7 @@ const int RELAY1 = D1;                      // GPIO 5
 #define GPIO2_PIN D4
 // We assume that all GPIOs are LOW
 boolean gpioState[] = {false, false};
-const int MAXRETRY=30;
+const int MAXRETRY=5;
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
@@ -220,10 +220,14 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   wifiMulti.run();
+
+  #ifdef THINGSBOARD
   if ( !mqttClient.connected() ) {
     reconnect();
   }
+  
   mqttClient.loop();
+  #endif
   soilMoistureSensor();
   delay(1000);
   blink();
@@ -842,6 +846,9 @@ BLYNK_CONNECTED()
 {
   Blynk.syncVirtual(V1);
   Blynk.syncVirtual(V2);
+
+  // Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
+  // Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
 }
 
 BLYNK_WRITE(V1)
@@ -850,6 +857,9 @@ BLYNK_WRITE(V1)
   Serial.print("Set point: ");
   Serial.println(soilMoistureSetPoint);
   Serial.println();
+
+  Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
+  Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
 }
 
 BLYNK_WRITE(V2)
@@ -858,7 +868,11 @@ BLYNK_WRITE(V2)
   Serial.print("Range: ");
   Serial.println(range);
   Serial.println();
+
+  Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
+  Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
 }
+
 
 BLYNK_READ(V10)
 {

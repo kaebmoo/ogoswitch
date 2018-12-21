@@ -51,10 +51,13 @@ SOFTWARE.
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 
+#include <Wire.h>
+#include <Adafruit_ADS1015.h>
 
-#define BLYNKLOCAL
-// #define SLEEP
-// #define THINGSBOARD
+
+// #define BLYNKLOCAL
+#define SLEEP
+#define THINGSBOARD
 // #define THINGSPEAK
 
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
@@ -137,6 +140,7 @@ ESP8266WiFiMulti wifiMulti;
 #ifdef SLEEP
   // sleep for this many seconds default is 300 (5 minutes)
   int sleepSeconds = 15;
+  Adafruit_ADS1015 ads1015;   // Construct an ads1015 at the default address: 0x48
 #endif
 
 
@@ -193,6 +197,7 @@ void setup() {
     #endif
 
     #ifdef SLEEP
+      ads1015.begin();  // Initialize ads1015    
       soilMoistureSensor();
       #ifdef THINGSPEAK
       // send data to thingspeak
@@ -244,7 +249,7 @@ void loop() {
 void soilMoistureSensor()
 {
   soilMoisture = analogRead(analogReadPin);
-  Serial.print("Analog Read : ");
+  Serial.print("Analog Read A0: ");
   Serial.print(soilMoisture);
   Serial.print(", " );
 
@@ -325,9 +330,10 @@ void wifiConnect()
   Serial.print("Connecting");
   Serial.println();
 
-  wifiMulti.addAP("Red", "12345678");
+  wifiMulti.addAP("Red1", "12345678");
   wifiMulti.addAP("ogofarm", "ogofarm2018");
   wifiMulti.addAP("Red_Plus", "12345678");
+  wifiMulti.addAP("Red", "12345678");
 
   Serial.println("Connecting Wifi...");
 
@@ -636,14 +642,31 @@ void sendThingSpeak()
 
 float checkBattery()
 {
-  unsigned int raw = 0;
   float volt = 0.0;
 
+  #ifndef SLEEP
+  unsigned int raw = 0;
   raw = analogRead(A0);
   volt = raw * (3.7 / 1023.0);
   // volt = volt * 4.2;
   Serial.print("Analog read: ");
   Serial.println(raw);
+  #endif
+
+  #ifdef SLEEP
+  int16_t adc0, adc1, adc2, adc3;
+  
+  adc0 = ads1015.readADC_SingleEnded(0);
+  adc1 = ads1015.readADC_SingleEnded(1);
+  adc2 = ads1015.readADC_SingleEnded(2);
+  adc3 = ads1015.readADC_SingleEnded(3);
+  
+  volt = ((float) adc1 * 3.0) / 1000.0;
+  Serial.print("Analog read A1: ");
+  Serial.println(adc1);
+  #endif
+  
+  
 
   // String v = String(volt);
   Serial.print("Battery voltage: ");

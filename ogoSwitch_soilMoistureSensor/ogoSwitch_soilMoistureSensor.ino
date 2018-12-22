@@ -98,11 +98,17 @@ int sendinterval = 60;                                       // send data interv
 
 #define TRIGGER_PIN D3                      // GPIO 0
 const int analogReadPin = A0;               // read for set options Soil Moisture or else ...
+#ifndef SLEEP
 const int RELAY1 = D1;                      // GPIO 5
+#endif
+
+#ifdef SLEEP
+const int RELAY1 = D7;
+#endif
 
 
-#define GPIO0 16
-#define GPIO2 2
+#define GPIO0 16                            // D0
+#define GPIO2 2                             // D4
 
 #define GPIO0_PIN D0
 #define GPIO2_PIN D4

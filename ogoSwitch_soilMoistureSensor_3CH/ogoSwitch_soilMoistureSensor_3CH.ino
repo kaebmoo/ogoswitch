@@ -26,8 +26,8 @@ SOFTWARE.
 /*
  * Hardware
  * Wemos D1 mini, Pro (esp8266)
- * soilWatch 10 use A0 pin
- * Wemos Relay Shield use D1 pin
+ * soilWatch 10 use A1, A2, A3 pin
+ * Wemos Relay Shield use D4,D5,D6 pin
  *
  *
  *
@@ -55,10 +55,11 @@ SOFTWARE.
 #include <Adafruit_ADS1015.h>
 
 
-// #define BLYNKLOCAL
-#define SLEEP
-#define THINGSBOARD
+#define BLYNKLOCAL
+// #define SLEEP
+// #define THINGSBOARD
 // #define THINGSPEAK
+#define MULTISENSOR
 
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
@@ -99,7 +100,9 @@ int sendinterval = 60;                                       // send data interv
 #define TRIGGER_PIN D3                      // GPIO 0
 const int analogReadPin = A0;               // read for set options Soil Moisture or else ...
 #ifndef SLEEP
-const int RELAY1 = D1;                      // GPIO 5
+const int RELAY1 = D4;                      // GPIO 5                     
+const int RELAY2 = D5;                        
+const int RELAY3 = D6;                       
 #endif
 
 #ifdef SLEEP
@@ -119,9 +122,15 @@ const int MAXRETRY=5;
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
 int maxADC = 928;                     // replace with max ADC value read fully submerged in water
-int soilMoistureSetPoint = 50;
-int soilMoisture, mappedValue;
+int soilMoistureSetPoint =  50;
+int soilMoistureSetPoint1 = 50;
+int soilMoistureSetPoint2 = 50;
+int soilMoistureSetPoint3 = 50;
+int soilMoisture, mappedValue, mappedValue1, mappedValue2, mappedValue3;
 int range = 20;
+int range1 = 20;
+int range2 = 20;
+int range3 = 20;
 
 const long interval = 1000;
 int ledState = LOW;
@@ -130,6 +139,8 @@ unsigned long previousMillis = 0;
 int offline = 0;
 BlynkTimer timer, checkConnectionTimer;
 WidgetLED led1(20);
+WidgetLED led2(21);
+WidgetLED led3(22);
 
 char *mqtt_user = "seal";
 char *mqtt_password = "sealwiththekiss";
@@ -146,6 +157,10 @@ ESP8266WiFiMulti wifiMulti;
 #ifdef SLEEP
   // sleep for this many seconds default is 300 (5 minutes)
   int sleepSeconds = 15;
+  Adafruit_ADS1015 ads1015;   // Construct an ads1015 at the default address: 0x48
+#endif
+
+#ifdef MULTISENSOR
   Adafruit_ADS1015 ads1015;   // Construct an ads1015 at the default address: 0x48
 #endif
 
@@ -202,6 +217,10 @@ void setup() {
     checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
     #endif
 
+    #ifdef MULTISENSOR
+      ads1015.begin();  // Initialize ads1015    
+    #endif
+    
     #ifdef SLEEP
       ads1015.begin();  // Initialize ads1015    
       soilMoistureSensor();
@@ -242,7 +261,6 @@ void loop() {
   mqttClient.loop();
   #endif
   // soilMoistureSensor();
-  
   blink();
 
   #if defined(BLYNKLOCAL) || defined(BLYNK)
@@ -256,6 +274,12 @@ void loop() {
 
 void soilMoistureSensor()
 {
+
+  #ifdef MULTISENSOR
+  soilMoistureSensor1();
+  soilMoistureSensor2();
+  soilMoistureSensor3();
+  #else
   soilMoisture = analogRead(analogReadPin);
   Serial.print("Analog Read A0: ");
   Serial.print(soilMoisture);
@@ -280,7 +304,93 @@ void soilMoistureSensor()
     digitalWrite(RELAY1, HIGH);
     led1.on();
   }
+  #endif
 }
+
+void soilMoistureSensor1()
+{
+  soilMoisture = ads1015.readADC_SingleEnded(1);
+  Serial.print("Analog Read 1 : ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+
+  mappedValue1 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value 1 = " );
+  Serial.println(mappedValue1);
+
+  if (mappedValue1 > (soilMoistureSetPoint1 + range1)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    digitalWrite(RELAY1, LOW);
+    led1.off();
+  }
+  else if (mappedValue1 < (soilMoistureSetPoint1 - range1)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    digitalWrite(RELAY1, HIGH);
+    led1.on();
+  }
+}
+
+void soilMoistureSensor2()
+{
+  soilMoisture = ads1015.readADC_SingleEnded(2);
+  Serial.print("Analog Read 2 : ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+
+  mappedValue2 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value 2 = " );
+  Serial.println(mappedValue2);
+
+  if (mappedValue2 > (soilMoistureSetPoint2 + range2)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    digitalWrite(RELAY2, LOW);
+    led2.off();
+  }
+  else if (mappedValue2 < (soilMoistureSetPoint2 - range2)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    digitalWrite(RELAY2, HIGH);
+    led2.on();
+  }
+}
+
+void soilMoistureSensor3()
+{
+  soilMoisture = ads1015.readADC_SingleEnded(3);
+  Serial.print("Analog Read 3 : ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+
+  mappedValue3 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value 3 = " );
+  Serial.println(mappedValue3);
+
+  if (mappedValue3 > (soilMoistureSetPoint3 + range3)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    digitalWrite(RELAY3, LOW);
+    led3.off();
+  }
+  else if (mappedValue3 < (soilMoistureSetPoint3 - range3)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    digitalWrite(RELAY3, HIGH);
+    led3.on();
+  }
+}
+
 
 void sendSoilMoistureData()
 {
@@ -294,7 +404,9 @@ void sendSoilMoistureData()
 
   // Prepare a JSON payload string
   String payload = "{";
-  payload += "\"soil moisture\":";  payload += mappedValue; payload += ",";
+  payload += "\"soil moisture 1\":";  payload += mappedValue1; payload += ",";
+  payload += "\"soil moisture 2\":";  payload += mappedValue2; payload += ",";
+  payload += "\"soil moisture 3\":";  payload += mappedValue3; payload += ",";
   #ifdef SLEEP
   float volt = checkBattery();
   payload += "\"battery\":"; payload += volt; payload += ",";
@@ -357,7 +469,6 @@ void wifiConnect()
       break;
     }
   }
-
   
   Serial.println();
   if (offline == 0) {
@@ -625,16 +736,13 @@ float checkBattery()
   #endif
 
   #ifdef SLEEP
-  int16_t adc0, adc1, adc2, adc3;
+  int16_t adc0;
   
   adc0 = ads1015.readADC_SingleEnded(0);
-  adc1 = ads1015.readADC_SingleEnded(1);
-  adc2 = ads1015.readADC_SingleEnded(2);
-  adc3 = ads1015.readADC_SingleEnded(3);
   
-  volt = ((float) adc1 * 3.0) / 1000.0;
+  volt = ((float) adc0 * 3.0) / 1000.0;
   Serial.print("Analog read A1: ");
-  Serial.println(adc1);
+  Serial.println(adc0);
   #endif
   
   
@@ -840,35 +948,91 @@ BLYNK_CONNECTED()
 {
   Blynk.syncVirtual(V1);
   Blynk.syncVirtual(V2);
+  Blynk.syncVirtual(V3);
+  Blynk.syncVirtual(V4);
+  Blynk.syncVirtual(V5);
+  Blynk.syncVirtual(V6);
 
-  // Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
-  // Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
 }
 
 BLYNK_WRITE(V1)
 {
-  soilMoistureSetPoint = param.asInt();
+  soilMoistureSetPoint1 = param.asInt();
   Serial.print("Set point: ");
-  Serial.println(soilMoistureSetPoint);
+  Serial.println(soilMoistureSetPoint1);
   Serial.println();
 
-  Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
-  Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
+  Blynk.virtualWrite(V31, soilMoistureSetPoint1+range1);
+  Blynk.virtualWrite(V32, soilMoistureSetPoint1-range1);
 }
 
 BLYNK_WRITE(V2)
 {
-  range = param.asInt();
+  range1 = param.asInt();
   Serial.print("Range: ");
-  Serial.println(range);
+  Serial.println(range1);
   Serial.println();
 
-  Blynk.virtualWrite(V21, soilMoistureSetPoint+range);
-  Blynk.virtualWrite(V22, soilMoistureSetPoint-range);
+  Blynk.virtualWrite(V31, soilMoistureSetPoint1+range1);
+  Blynk.virtualWrite(V32, soilMoistureSetPoint1-range1);
+}
+
+BLYNK_WRITE(V3)
+{
+  soilMoistureSetPoint2 = param.asInt();
+  Serial.print("Set point: ");
+  Serial.println(soilMoistureSetPoint2);
+  Serial.println();
+
+  Blynk.virtualWrite(V33, soilMoistureSetPoint2+range2);
+  Blynk.virtualWrite(V34, soilMoistureSetPoint2-range2);
+}
+
+BLYNK_WRITE(V4)
+{
+  range2 = param.asInt();
+  Serial.print("Range: ");
+  Serial.println(range2);
+  Serial.println();
+
+  Blynk.virtualWrite(V33, soilMoistureSetPoint2+range2);
+  Blynk.virtualWrite(V34, soilMoistureSetPoint2-range2);
+}
+
+BLYNK_WRITE(V5)
+{
+  soilMoistureSetPoint3 = param.asInt();
+  Serial.print("Set point: ");
+  Serial.println(soilMoistureSetPoint3);
+  Serial.println();
+
+  Blynk.virtualWrite(V35, soilMoistureSetPoint3+range3);
+  Blynk.virtualWrite(V36, soilMoistureSetPoint3-range3);
+}
+
+BLYNK_WRITE(V6)
+{
+  range3 = param.asInt();
+  Serial.print("Range: ");
+  Serial.println(range3);
+  Serial.println();
+
+  Blynk.virtualWrite(V35, soilMoistureSetPoint3+range3);
+  Blynk.virtualWrite(V36, soilMoistureSetPoint3-range3);
 }
 
 
 BLYNK_READ(V10)
 {
-  Blynk.virtualWrite(V10, mappedValue);
+  Blynk.virtualWrite(V10, mappedValue1);
+}
+
+BLYNK_READ(V11)
+{
+  Blynk.virtualWrite(V11, mappedValue2);
+}
+
+BLYNK_READ(V12)
+{
+  Blynk.virtualWrite(V12, mappedValue3);
 }

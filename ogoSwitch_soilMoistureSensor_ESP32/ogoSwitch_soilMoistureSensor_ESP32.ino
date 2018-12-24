@@ -423,33 +423,33 @@ BLYNK_WRITE(V2)
 
 BLYNK_WRITE(V3)
 {
-  soilMoistureSetPoint1 = param.asInt();
+  soilMoistureSetPoint2 = param.asInt();
   Serial.print("Set point: ");
-  Serial.println(soilMoistureSetPoint1);
+  Serial.println(soilMoistureSetPoint2);
   Serial.println();
 }
 
 BLYNK_WRITE(V4)
 {
-  range1 = param.asInt();
+  range2 = param.asInt();
   Serial.print("Range: ");
-  Serial.println(range1);
+  Serial.println(range2);
   Serial.println();
 }
 
 BLYNK_WRITE(V5)
 {
-  soilMoistureSetPoint1 = param.asInt();
+  soilMoistureSetPoint3 = param.asInt();
   Serial.print("Set point: ");
-  Serial.println(soilMoistureSetPoint1);
+  Serial.println(soilMoistureSetPoint3);
   Serial.println();
 }
 
 BLYNK_WRITE(V6)
 {
-  range1 = param.asInt();
+  range3 = param.asInt();
   Serial.print("Range: ");
-  Serial.println(range1);
+  Serial.println(range3);
   Serial.println();
 }
 

@@ -377,7 +377,7 @@ void ondemandWiFi()
   
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", c_thingsboardServer, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", c_mqttport, 7);
-  WiFiManagerParameter custom_sendinterval("interval", "send data interval time", c_sendinterval, 7);
+  WiFiManagerParameter custom_sendinterval("interval", "send data interval time (second)", c_sendinterval, 7);
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   WiFiManagerParameter custom_thingsboard_token("token", "thingsboard token", c_token, 32);
   WiFiManagerParameter custom_c_writeapikey("c_writeapikey", "Write API Key : ThingSpeak", c_writeAPIKey, 17);
@@ -443,8 +443,8 @@ void ondemandWiFi()
     Serial.print("Thinspeak write API Key : ");
     Serial.println(writeAPIKey);
     #ifdef SLEEP
-    Serial.println("Sleep interval : ");
-    Serial.print(c_sleepSeconds);
+    Serial.print("Sleep interval : ");
+    Serial.println(c_sleepSeconds);
     #endif
 
     writeEEPROM(thingsboardServer, 0, 40);

@@ -232,7 +232,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  wifiMulti.run();
+  // wifiMulti.run();
 
   #ifdef THINGSBOARD
   if ( !mqttClient.connected() ) {
@@ -338,14 +338,14 @@ void wifiConnect()
   Serial.print("Connecting");
   Serial.println();
 
-  wifiMulti.addAP("Red1", "12345678");
-  wifiMulti.addAP("ogofarm", "ogofarm2018");
-  wifiMulti.addAP("Red_Plus", "12345678");
-  wifiMulti.addAP("Red", "12345678");
+  // wifiMulti.addAP("Red1", "12345678");
+  // wifiMulti.addAP("ogofarm", "ogofarm2018");
+  // wifiMulti.addAP("Red_Plus", "12345678");
+  // wifiMulti.addAP("Red", "12345678");
 
   Serial.println("Connecting Wifi...");
 
-  while (wifiMulti.run() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
     if ( digitalRead(TRIGGER_PIN) == LOW ) {

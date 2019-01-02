@@ -55,9 +55,10 @@ SOFTWARE.
 #include <Adafruit_ADS1015.h>
 
 
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
 // #define SLEEP
-// #define THINGSBOARD
+#define FARMLOCAL
+#define THINGSBOARD
 // #define THINGSPEAK
 #define MULTISENSOR
 
@@ -65,11 +66,11 @@ const int FW_VERSION = 1;  // 2018 12 1 version 1.0
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 #ifdef ARDUINO_ESP8266_WEMOS_D1MINI
-  String firmware_name = "ogoSwitch_soilMoistureSensor.ino.d1_mini";
+  String firmware_name = "ogoSwitch_soilMoistureSensor_3CH.ino.d1_mini";
 #elif ARDUINO_ESP8266_WEMOS_D1MINILITE
-  String firmware_name = "ogoSwitch_soilMoistureSensor.ino.d1_minilite";
+  String firmware_name = "ogoSwitch_soilMoistureSensor_3CH.ino.d1_minilite";
 #elif ARDUINO_ESP8266_WEMOS_D1MINIPRO
-  String firmware_name = "ogoSwitch_soilMoistureSensor.ino.d1_minipro";
+  String firmware_name = "ogoSwitch_soilMoistureSensor_3CH.ino.d1_minipro";
 #endif
 
 char thingSpeakAddress[] = "api.thingspeak.com";
@@ -79,7 +80,7 @@ char *writeAPIKey = "8M07EYX8NPCD9V8U";
 
 char thingsboardServer[40] = "box.greenwing.email";
 int  mqttport = 1883;                      // 1883 or 1888
-char token[32] = "MhqKwhgcDr5Y6uKYQ5d4";   // device token from thingsboard server
+char token[32] = "YR2HefpIxXZY9DEk1Dvv";   // device token from thingsboard server
 
 char c_thingsboardServer[41] = "192.168.1.10";
 char c_mqttport[8] = "1883";
@@ -187,10 +188,13 @@ void setup() {
     #ifdef BLYNKLOCAL
     Blynk.config(auth, "blynk.ogonan.com", 80);  // in place of Blynk.begin(auth, ssid, pass);
     #endif
+    #ifdef FARMLOCAL
+    Blynk.config(auth, thingsboardServer, 80);
+    #endif
     #ifdef BLYNK
     Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
     #endif
-    #if defined(BLYNKLOCAL) || defined(BLYNK)
+    #if defined(BLYNKLOCAL) || defined(BLYNK) || defined(FARMLOCAL)
     boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
     Serial.print("Blynk connect : ");
     Serial.println(result);
@@ -213,16 +217,18 @@ void setup() {
     timer.setInterval(sendinterval * 1000, sendSoilMoistureData);
     #endif
 
-    #if defined(BLYNKLOCAL) || defined(BLYNK)
+    #if defined(BLYNKLOCAL) || defined(BLYNK) || defined(FARMLOCAL)
     checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
     #endif
 
     #ifdef MULTISENSOR
       ads1015.begin();  // Initialize ads1015    
+      ads1015.setGain(GAIN_ONE);     // 1x gain   +/- 4.096V  1 bit = 2mV
     #endif
     
     #ifdef SLEEP
       ads1015.begin();  // Initialize ads1015    
+      ads1015.setGain(GAIN_ONE);     // 1x gain   +/- 4.096V  1 bit = 2mV
       soilMoistureSensor();
       #ifdef THINGSPEAK
       // send data to thingspeak
@@ -251,7 +257,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  wifiMulti.run();
+  // wifiMulti.run();
 
   #ifdef THINGSBOARD
   if ( !mqttClient.connected() ) {
@@ -263,7 +269,7 @@ void loop() {
   // soilMoistureSensor();
   blink();
 
-  #if defined(BLYNKLOCAL) || defined(BLYNK)
+  #if defined(BLYNKLOCAL) || defined(BLYNK) || defined(FARMLOCAL)
   if (Blynk.connected()) {
     Blynk.run();
   }
@@ -450,14 +456,14 @@ void wifiConnect()
   Serial.print("Connecting");
   Serial.println();
 
-  wifiMulti.addAP("Red1", "12345678");
-  wifiMulti.addAP("ogofarm", "ogofarm2018");
-  wifiMulti.addAP("Red_Plus", "12345678");
-  wifiMulti.addAP("Red", "12345678");
+  // wifiMulti.addAP("Red1", "12345678");
+  // wifiMulti.addAP("ogofarm", "ogofarm2018");
+  // wifiMulti.addAP("Red_Plus", "12345678");
+  // wifiMulti.addAP("Red", "12345678");
 
   Serial.println("Connecting Wifi...");
 
-  while (wifiMulti.run() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
     if ( digitalRead(TRIGGER_PIN) == LOW ) {
@@ -465,7 +471,7 @@ void wifiConnect()
     }
     retry2Connect++;
     if (retry2Connect >= 30) {
-      offline = 1;
+      ondemandWiFi();
       break;
     }
   }
@@ -488,7 +494,7 @@ void ondemandWiFi()
   
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", c_thingsboardServer, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", c_mqttport, 7);
-  WiFiManagerParameter custom_sendinterval("interval", "send data interval time", c_sendinterval, 7);
+  WiFiManagerParameter custom_sendinterval("interval", "send data interval time (second)", c_sendinterval, 7);
   WiFiManagerParameter custom_c_auth("c_auth", "Auth Token", c_auth, 37);
   WiFiManagerParameter custom_thingsboard_token("token", "thingsboard token", c_token, 32);
   WiFiManagerParameter custom_c_writeapikey("c_writeapikey", "Write API Key : ThingSpeak", c_writeAPIKey, 17);

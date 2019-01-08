@@ -15,7 +15,8 @@
 #include <BlynkSimpleEsp32.h>
 #include "mdns.h"
 
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
+#define FARMLOCAL
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -28,7 +29,7 @@ bool shouldSaveConfig = false;
 #define TRIGGER_PIN 2                        // GPIO 
 const int analogReadPin1 = 32;               // read for set options Soil Moisture or else ...
 const int analogReadPin2 = 33;               // read for set options Soil Moisture or else ...
-const int analogReadPin3 = 34;               // read for set options Soil Moisture or else ...
+const int analogReadPin3 = 35;               // read for set options Soil Moisture or else ...
 const int RELAY1 = 15;                       // 5 = D1
 const int RELAY2 = 16;                       // 
 const int RELAY3 = 17;                       // 
@@ -71,9 +72,16 @@ void setup() {
   if (offline == 0) {
     #ifdef BLYNKLOCAL
     Blynk.config(auth, "blynk.ogonan.com", 80);  // in place of Blynk.begin(auth, ssid, pass);
-    #else
+    #endif
+     
+    #ifdef FARMLOCAL
+    Blynk.config(auth, "192.168.2.64", 80);
+    #endif
+    
+    #ifdef BLYNK
     Blynk.config(auth);  // in place of Blynk.begin(auth, ssid, pass);
     #endif
+    
     boolean result = Blynk.connect(3333);  // timeout set to 10 seconds and then continue without Blynk, 3333 is 10 seconds because Blynk.connect is in 3ms units.
     Serial.print("Blynk connect : ");
     Serial.println(result);
@@ -234,7 +242,7 @@ void wifiConnect()
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
-    if ( digitalRead(TRIGGER_PIN) == HIGH ) {
+    if ( digitalRead(TRIGGER_PIN) == LOW ) {
       ondemandWiFi();
     }
     retry2Connect++;
@@ -411,6 +419,9 @@ BLYNK_WRITE(V1)
   Serial.print("Set point: ");
   Serial.println(soilMoistureSetPoint1);
   Serial.println();
+
+  Blynk.virtualWrite(V31, soilMoistureSetPoint1+range1);
+  Blynk.virtualWrite(V32, soilMoistureSetPoint1-range1);
 }
 
 BLYNK_WRITE(V2)
@@ -419,6 +430,9 @@ BLYNK_WRITE(V2)
   Serial.print("Range: ");
   Serial.println(range1);
   Serial.println();
+
+  Blynk.virtualWrite(V31, soilMoistureSetPoint1+range1);
+  Blynk.virtualWrite(V32, soilMoistureSetPoint1-range1);
 }
 
 BLYNK_WRITE(V3)
@@ -427,6 +441,9 @@ BLYNK_WRITE(V3)
   Serial.print("Set point: ");
   Serial.println(soilMoistureSetPoint2);
   Serial.println();
+
+  Blynk.virtualWrite(V33, soilMoistureSetPoint2+range2);
+  Blynk.virtualWrite(V34, soilMoistureSetPoint2-range2);
 }
 
 BLYNK_WRITE(V4)
@@ -435,6 +452,9 @@ BLYNK_WRITE(V4)
   Serial.print("Range: ");
   Serial.println(range2);
   Serial.println();
+
+  Blynk.virtualWrite(V33, soilMoistureSetPoint2+range2);
+  Blynk.virtualWrite(V34, soilMoistureSetPoint2-range2);
 }
 
 BLYNK_WRITE(V5)
@@ -443,6 +463,9 @@ BLYNK_WRITE(V5)
   Serial.print("Set point: ");
   Serial.println(soilMoistureSetPoint3);
   Serial.println();
+
+  Blynk.virtualWrite(V35, soilMoistureSetPoint3+range3);
+  Blynk.virtualWrite(V36, soilMoistureSetPoint3-range3);
 }
 
 BLYNK_WRITE(V6)
@@ -451,6 +474,9 @@ BLYNK_WRITE(V6)
   Serial.print("Range: ");
   Serial.println(range3);
   Serial.println();
+
+  Blynk.virtualWrite(V35, soilMoistureSetPoint3+range3);
+  Blynk.virtualWrite(V36, soilMoistureSetPoint3-range3);
 }
 
 

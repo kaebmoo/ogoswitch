@@ -26,13 +26,14 @@ char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token 
 bool shouldSaveConfig = false;
 
 
-#define TRIGGER_PIN 2                        // GPIO 
+#define TRIGGER_PIN 12                        // GPIO 
+int _LED = 2;
 const int analogReadPin1 = 32;               // read for set options Soil Moisture or else ...
 const int analogReadPin2 = 33;               // read for set options Soil Moisture or else ...
 const int analogReadPin3 = 35;               // read for set options Soil Moisture or else ...
-const int RELAY1 = 15;                       // 5 = D1
-const int RELAY2 = 16;                       // 
-const int RELAY3 = 17;                       // 
+const int RELAY1 = 25;                       // 5 = D1
+const int RELAY2 = 26;                       // 
+const int RELAY3 = 27;                       // 
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
@@ -63,7 +64,7 @@ void setup() {
   pinMode(RELAY1, OUTPUT);
   pinMode(RELAY2, OUTPUT);
   pinMode(RELAY3, OUTPUT);
-  pinMode(BUILTIN_LED, OUTPUT);
+  pinMode(_LED, OUTPUT);
   pinMode(TRIGGER_PIN, INPUT);
    
   delay(1000);
@@ -222,7 +223,7 @@ void blink()
 
     // toggle the LED
     ledState = !ledState;
-    digitalWrite(BUILTIN_LED, ledState);
+    digitalWrite(_LED, ledState);
   }
 }
 
@@ -242,7 +243,7 @@ void wifiConnect()
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print("1");
-    if ( digitalRead(TRIGGER_PIN) == LOW ) {
+    if ( digitalRead(TRIGGER_PIN) == HIGH ) {
       ondemandWiFi();
     }
     retry2Connect++;

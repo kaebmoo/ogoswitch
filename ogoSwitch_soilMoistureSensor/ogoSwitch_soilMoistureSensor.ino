@@ -55,12 +55,17 @@ SOFTWARE.
 #include <Adafruit_ADS1015.h>
 
 
-// #define BLYNKLOCAL
-#define SLEEP
-#define THINGSBOARD
+#define BLYNKLOCAL
+// #define SLEEP
+// #define THINGSBOARD
 // #define THINGSPEAK
 
+#ifdef SLEEP
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
+#else
+const int FW_VERSION = 2;  // 
+#endif
+
 const char* firmwareUrlBase = "http://www.ogonan.com/ogoupdate/";
 
 #ifdef ARDUINO_ESP8266_WEMOS_D1MINI
@@ -188,7 +193,7 @@ void setup() {
     }
     #endif
 
-    
+
     #ifdef THINGSPEAK
     ThingSpeak.begin( client );
     timer.setInterval(sendinterval * 1000, sendThingSpeak);
@@ -203,7 +208,7 @@ void setup() {
     #endif
 
     #ifdef SLEEP
-      ads1015.begin();  // Initialize ads1015    
+      ads1015.begin();  // Initialize ads1015
       soilMoistureSensor();
       #ifdef THINGSPEAK
       // send data to thingspeak
@@ -217,10 +222,10 @@ void setup() {
       }
       sendSoilMoistureData();
       #endif
-    
+
     Serial.println("I'm going to sleep.");
     Serial.println("Goodnight folks!");
-    
+
     delay(15000);
     ESP.deepSleep(sleepSeconds * 1000000);
     #endif
@@ -238,11 +243,11 @@ void loop() {
   if ( !mqttClient.connected() ) {
     reconnect();
   }
-  
+
   mqttClient.loop();
   #endif
   // soilMoistureSensor();
-  
+
   blink();
 
   #if defined(BLYNKLOCAL) || defined(BLYNK)
@@ -328,12 +333,12 @@ void wifiConnect()
   int retry2Connect = 0;
   String SSID = WiFi.SSID();
   String PSK = WiFi.psk();
-  
+
   WiFi.mode(WIFI_STA);
   Serial.println();
   Serial.println(WiFi.SSID());
   Serial.println(WiFi.psk());
-  
+
   WiFi.begin();
   Serial.print("Connecting");
   Serial.println();
@@ -353,18 +358,19 @@ void wifiConnect()
     }
     retry2Connect++;
     if (retry2Connect >= 30) {
-      offline = 1;
+      // offline = 1;
+      ondemandWiFi();
       break;
     }
   }
 
-  
+
   Serial.println();
   if (offline == 0) {
     Serial.print("Connected, IP address: ");
     Serial.println(WiFi.localIP());
   }
-  
+
   Serial.println();
 }
 
@@ -374,7 +380,7 @@ void ondemandWiFi()
 
   wifiManager.setBreakAfterConfig(true);
   wifiManager.setConfigPortalTimeout(60);
-  
+
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", c_thingsboardServer, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", c_mqttport, 7);
   WiFiManagerParameter custom_sendinterval("interval", "send data interval time (second)", c_sendinterval, 7);
@@ -478,7 +484,7 @@ void readConfig()
   #ifdef SLEEP
   memset(c_sleepSeconds, 0, sizeof(c_sleepSeconds));
   #endif
-  
+
   readEEPROM(thingsboardServer, 0, 40);
   readEEPROM(c_mqttport, 40, 7);
   sendinterval = eeGetInt(47);
@@ -487,7 +493,7 @@ void readConfig()
   readEEPROM(writeAPIKey, 112, 32); // thingspeak write api key
   mqttport = atoi(c_mqttport);
   #ifdef SLEEP
-  sleepSeconds = eeGetInt(144); 
+  sleepSeconds = eeGetInt(144);
   #endif
 
   Serial.println();
@@ -626,18 +632,18 @@ float checkBattery()
 
   #ifdef SLEEP
   int16_t adc0, adc1, adc2, adc3;
-  
+
   adc0 = ads1015.readADC_SingleEnded(0);
   adc1 = ads1015.readADC_SingleEnded(1);
   adc2 = ads1015.readADC_SingleEnded(2);
   adc3 = ads1015.readADC_SingleEnded(3);
-  
+
   volt = ((float) adc1 * 3.0) / 1000.0;
   Serial.print("Analog read A1: ");
   Serial.println(adc1);
   #endif
-  
-  
+
+
 
   // String v = String(volt);
   Serial.print("Battery voltage: ");

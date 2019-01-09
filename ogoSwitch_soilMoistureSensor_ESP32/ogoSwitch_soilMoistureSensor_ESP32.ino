@@ -14,18 +14,30 @@
 // #include <BlynkSimpleEsp8266.h>
 #include <BlynkSimpleEsp32.h>
 #include "mdns.h"
+#include <ArduinoJson.h>
+#include <PubSubClient.h>
 
 // #define BLYNKLOCAL
 #define FARMLOCAL
+#define THINGBOARD
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "634021991b694e08b004ca8b13f08bc1";
 char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
 
+char thingsboardServer[40] = "box.greenwing.email";
+int  mqttport = 1883;                      // 1883 or 1888
+char token[32] = "qxqW3i0uQEkji1sZfmy0";   // device token from thingsboard server
+
+char c_thingsboardServer[41] = "192.168.2.64";
+char c_mqttport[8] = "1883";
+char c_token[33] = "12345678901234567890";
+char c_sendinterval[8] = "10000";
+
 //flag for saving data
 bool shouldSaveConfig = false;
-
+int sendinterval = 60;                                       // send data interval time in second
 
 #define TRIGGER_PIN 12                        // GPIO 
 int _LED = 2;
@@ -36,6 +48,15 @@ const int RELAY1 = 25;                       // 5 = D1
 const int RELAY2 = 26;                       // 
 const int RELAY3 = 27;   
 // 
+
+#define GPIO0 16                            
+#define GPIO2 17                             
+
+#define GPIO0_PIN 11
+#define GPIO2_PIN 12
+// We assume that all GPIOs are LOW
+boolean gpioState[] = {false, false};
+const int MAXRETRY=5;
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
@@ -59,6 +80,13 @@ WidgetLED led2(21);
 WidgetLED led3(22);
 
 char hostString[16] = {0};
+WiFiClient client;
+PubSubClient mqttClient(client);
+
+char *mqtt_user = "";
+char *mqtt_password = "";
+const char* mqtt_server = "db.ogonan.com";
+int mqtt_reconnect = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -110,11 +138,24 @@ void setup() {
   
     timerStatus.setInterval(1000L, soilMoistureSensor);
     soilMoistureSensor();
+    #ifdef THINGSBOARD
+    setup_mqtt();
+    timer.setInterval(sendinterval * 1000, sendSoilMoistureData);
+    #endif
   }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  #ifdef THINGSBOARD
+  if ( !mqttClient.connected() ) {
+    reconnect();
+  }
+
+  mqttClient.loop();
+  #endif
+  
   blink();
 
   if (Blynk.connected()) {
@@ -213,6 +254,41 @@ void soilMoistureSensor3()
     digitalWrite(RELAY3, HIGH);
     led3.on();
   }
+}
+
+void sendSoilMoistureData()
+{
+
+
+  // Just debug messages
+  Serial.println("Send soil moisture data.");
+  Serial.print( "[ ") ;
+  Serial.print( mappedValue1 );
+  Serial.print( ", " );
+  Serial.print( mappedValue2 );
+  Serial.print( ", " );
+  Serial.print( mappedValue3 );
+  Serial.print( "]   -> " );
+
+  // Prepare a JSON payload string
+  String payload = "{";
+  payload += "\"soil moisture 1\":";  payload += mappedValue1; payload += ",";
+  payload += "\"soil moisture 2\":";  payload += mappedValue2; payload += ",";
+  payload += "\"soil moisture 3\":";  payload += mappedValue3; payload += ",";
+  #ifdef SLEEP
+  float volt = checkBattery();
+  payload += "\"battery\":"; payload += volt; payload += ",";
+  #endif
+  payload += "\"active 1\":"; payload += digitalRead(RELAY1) ? true : false; payload += ",";
+  payload += "\"active 2\":"; payload += digitalRead(RELAY2) ? true : false; payload += ",";
+  payload += "\"active 3\":"; payload += digitalRead(RELAY3) ? true : false;
+  payload += "}";
+
+  // Send payload
+  char attributes[100];
+  payload.toCharArray( attributes, 128 );
+  mqttClient.publish( "v1/devices/me/telemetry", attributes );
+  Serial.println( attributes );
 }
 
 void blink()
@@ -365,6 +441,141 @@ int eeGetInt(int pos) {
   *(p + 2)  = EEPROM.read(pos + 2);
   *(p + 3)  = EEPROM.read(pos + 3);
   return val;
+}
+
+void setup_mqtt()
+{
+  #ifdef THINGSBOARD
+  Serial.println("FARM Server : "+String(thingsboardServer)+" mqtt port: "+String(mqttport));
+  mqttClient.setServer(thingsboardServer, mqttport);  // default port 1883, mqtt_server, thingsboardServer
+  #else
+  mqttClient.setServer(mqtt_server, mqttport);
+  #endif
+  mqttClient.setCallback(callback);
+  if (mqttClient.connect("soilmoisture-esp32", token, NULL)) {
+    Serial.print("mqtt connected : ");
+    Serial.println(thingsboardServer);  // mqtt_server
+    Serial.println();
+  }
+}
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  int i;
+
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  char json[length + 1];
+  strncpy (json, (char*)payload, length);
+  json[length] = '\0';
+
+  // Decode JSON request
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& data = jsonBuffer.parseObject((char*)json);
+
+  if (!data.success())
+  {
+    Serial.println("parseObject() failed");
+    return;
+  }
+
+  // Check request method
+  String methodName = String((const char*)data["method"]);
+
+  if (methodName.equals("getGpioStatus")) {
+    // Reply with GPIO status
+    String responseTopic = String(topic);
+    responseTopic.replace("request", "response");
+    mqttClient.publish(responseTopic.c_str(), get_gpio_status().c_str());
+  } else if (methodName.equals("setGpioStatus")) {
+    // Update GPIO status and reply
+    set_gpio_status(data["params"]["pin"], data["params"]["enabled"]);
+    String responseTopic = String(topic);
+    responseTopic.replace("request", "response");
+    mqttClient.publish(responseTopic.c_str(), get_gpio_status().c_str());
+    mqttClient.publish("v1/devices/me/attributes", get_gpio_status().c_str());
+  }
+
+}
+
+
+String get_gpio_status() {
+  // Prepare gpios JSON payload string
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& data = jsonBuffer.createObject();
+
+  data[String(GPIO0_PIN)] = gpioState[0] ? true : false;
+  data[String(GPIO2_PIN)] = gpioState[1] ? true : false;
+
+  char payload[256];
+  data.printTo(payload, sizeof(payload));
+
+  String strPayload = String(payload);
+  Serial.print("Get gpio status: ");
+  Serial.println(strPayload);
+
+  return strPayload;
+}
+
+void set_gpio_status(int pin, boolean enabled) {
+  if (pin == GPIO0_PIN) {
+    // Output GPIOs state
+    digitalWrite(GPIO0, enabled ? HIGH : LOW);
+    // Update GPIOs state
+    gpioState[0] = enabled;
+  }
+  else if (pin == GPIO2_PIN) {
+    // Output GPIOs state
+    digitalWrite(GPIO2, enabled ? HIGH : LOW);
+    // Update GPIOs state
+    gpioState[1] = enabled;
+  }
+
+}
+
+void reconnect()
+{
+  // Loop until we're reconnected
+
+
+  while (!mqttClient.connected()) {
+    Serial.print("Attempting MQTT connection...");
+
+    // Attempt to connect
+    #ifdef THINGSBOARD
+    if (mqttClient.connect("soilmoisture-esp32", token, NULL)) {  // connect to thingsboards
+    #else
+    if (mqttClient.connect("soilmoisture-esp32", mqtt_user, mqtt_password)) {  // connect to thingsboards
+    #endif
+      Serial.print("connected : ");
+      Serial.println(thingsboardServer); // mqtt_server
+
+
+
+      // Once connected, publish an announcement...
+      // mqttClient.publish(roomStatus, "hello world");
+
+    } else {
+      Serial.print("failed, reconnecting state = ");
+      Serial.print(mqttClient.state());
+      Serial.print(" try : ");
+      Serial.print(mqtt_reconnect+1);
+      Serial.println(" try again in 2 seconds");
+      // Wait 2 seconds before retrying
+      delay(2000);
+    }
+    mqtt_reconnect++;
+    if (mqtt_reconnect > MAXRETRY) {
+      mqtt_reconnect = 0;
+      break;
+    }
+  }
 }
 
 int blynkreconnect = 0;

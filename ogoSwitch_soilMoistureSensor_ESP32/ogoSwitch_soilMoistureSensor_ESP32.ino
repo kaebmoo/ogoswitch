@@ -22,6 +22,7 @@
 // Go to the Project Settings (nut icon).
 char auth[] = "634021991b694e08b004ca8b13f08bc1";
 char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
+
 //flag for saving data
 bool shouldSaveConfig = false;
 
@@ -33,7 +34,8 @@ const int analogReadPin2 = 33;               // read for set options Soil Moistu
 const int analogReadPin3 = 35;               // read for set options Soil Moisture or else ...
 const int RELAY1 = 25;                       // 5 = D1
 const int RELAY2 = 26;                       // 
-const int RELAY3 = 27;                       // 
+const int RELAY3 = 27;   
+// 
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air

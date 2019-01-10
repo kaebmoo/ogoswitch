@@ -19,7 +19,7 @@
 
 // #define BLYNKLOCAL
 #define FARMLOCAL
-#define THINGBOARD
+#define THINGSBOARD
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -74,7 +74,7 @@ int ledState = LOW;
 unsigned long previousMillis = 0;
 
 int offline = 0;
-BlynkTimer timerStatus, timerCheckConnection;
+BlynkTimer timer, timerStatus, timerCheckConnection;
 WidgetLED led1(20);
 WidgetLED led2(21);
 WidgetLED led3(22);
@@ -163,6 +163,7 @@ void loop() {
   }
   timerCheckConnection.run();
   timerStatus.run();
+  timer.run();
 }
 
 void soilMoistureSensor()
@@ -446,15 +447,20 @@ int eeGetInt(int pos) {
 void setup_mqtt()
 {
   #ifdef THINGSBOARD
-  Serial.println("FARM Server : "+String(thingsboardServer)+" mqtt port: "+String(mqttport));
-  mqttClient.setServer(thingsboardServer, mqttport);  // default port 1883, mqtt_server, thingsboardServer
+    #ifndef FARMLOCAL
+    Serial.println("FARM Server : "+String(thingsboardServer)+" mqtt port: "+String(mqttport));
+    mqttClient.setServer(thingsboardServer, mqttport);  // default port 1883, mqtt_server, thingsboardServer
+    #else
+    Serial.println("FARM Server : "+String("192.168.2.64")+" mqtt port: "+String(mqttport));
+    mqttClient.setServer("192.168.2.64", mqttport);  // default port 1883, mqtt_server, thingsboardServer
+    #endif    
   #else
   mqttClient.setServer(mqtt_server, mqttport);
   #endif
   mqttClient.setCallback(callback);
   if (mqttClient.connect("soilmoisture-esp32", token, NULL)) {
     Serial.print("mqtt connected : ");
-    Serial.println(thingsboardServer);  // mqtt_server
+    Serial.println();  
     Serial.println();
   }
 }

@@ -141,6 +141,8 @@ void setup() {
     #ifdef THINGSBOARD
     setup_mqtt();
     timer.setInterval(sendinterval * 1000, sendSoilMoistureData);
+    
+    sendSoilMoistureData();
     #endif
   }
 }
@@ -258,9 +260,7 @@ void soilMoistureSensor3()
 }
 
 void sendSoilMoistureData()
-{
-
-
+{  
   // Just debug messages
   Serial.println("Send soil moisture data.");
   Serial.print( "[ ") ;
@@ -270,24 +270,31 @@ void sendSoilMoistureData()
   Serial.print( ", " );
   Serial.print( mappedValue3 );
   Serial.print( "]   -> " );
+  
+  sendDatatoThingsboard("\"soil moisture 1\":", mappedValue1, "\"active 1\":", digitalRead(RELAY1));
+  delay(100);
+  sendDatatoThingsboard("\"soil moisture 2\":", mappedValue2, "\"active 2\":", digitalRead(RELAY2));
+  delay(100);
+  sendDatatoThingsboard("\"soil moisture 3\":", mappedValue3, "\"active 3\":", digitalRead(RELAY3));
+}
+
+void sendDatatoThingsboard(String field1, int value, String field2, int active)
+{
 
   // Prepare a JSON payload string
   String payload = "{";
-  payload += "\"soil moisture 1\":";  payload += mappedValue1; payload += ",";
-  payload += "\"soil moisture 2\":";  payload += mappedValue2; payload += ",";
-  payload += "\"soil moisture 3\":";  payload += mappedValue3; payload += ",";
+  payload += field1;  payload += value; payload += ",";
+  
   #ifdef SLEEP
   float volt = checkBattery();
   payload += "\"battery\":"; payload += volt; payload += ",";
   #endif
-  payload += "\"active 1\":"; payload += digitalRead(RELAY1) ? true : false; payload += ",";
-  payload += "\"active 2\":"; payload += digitalRead(RELAY2) ? true : false; payload += ",";
-  payload += "\"active 3\":"; payload += digitalRead(RELAY3) ? true : false;
+  payload += field2; payload += active ? true : false;
   payload += "}";
 
   // Send payload
-  char attributes[256];
-  payload.toCharArray( attributes, 256 );
+  char attributes[128];
+  payload.toCharArray( attributes, 128 );
   mqttClient.publish( "v1/devices/me/telemetry", attributes );
   Serial.println( attributes );
 }

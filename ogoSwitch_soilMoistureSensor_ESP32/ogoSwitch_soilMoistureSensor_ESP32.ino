@@ -286,8 +286,8 @@ void sendSoilMoistureData()
   payload += "}";
 
   // Send payload
-  char attributes[100];
-  payload.toCharArray( attributes, 128 );
+  char attributes[256];
+  payload.toCharArray( attributes, 256 );
   mqttClient.publish( "v1/devices/me/telemetry", attributes );
   Serial.println( attributes );
 }

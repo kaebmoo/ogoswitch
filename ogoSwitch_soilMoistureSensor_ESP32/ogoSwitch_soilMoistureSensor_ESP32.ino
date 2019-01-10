@@ -567,8 +567,8 @@ void reconnect()
     #else
     if (mqttClient.connect("soilmoisture-esp32", mqtt_user, mqtt_password)) {  // connect to thingsboards
     #endif
-      Serial.print("connected : ");
-      Serial.println(thingsboardServer); // mqtt_server
+    Serial.print("connected : ");
+    Serial.println(); 
 
 
 

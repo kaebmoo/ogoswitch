@@ -558,6 +558,7 @@ void reconnect()
 
 
   while (!mqttClient.connected()) {
+    wifiConnect();
     Serial.print("Attempting MQTT connection...");
 
     // Attempt to connect

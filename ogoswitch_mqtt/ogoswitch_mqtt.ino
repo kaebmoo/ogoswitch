@@ -54,7 +54,7 @@ const long interval = 1000;
 int ledState = LOW;
 unsigned long previousMillis = 0;
 
-const int MAXRETRY=4; // 0 - 4
+const int MAXRETRY=30; // 0 - 4
 
 byte mac[6] { 0x60, 0x01, 0x94, 0x82, 0x85, 0x54};
 IPAddress ip(192, 168, 9, 101);
@@ -143,7 +143,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       bstart = false;
       bstop = false;
 
-    } else if ((char)payload[0] == '2') {       // 2 - get status from D2 (connect D2 <---> D1) or D1 (relay pin) 
+    } else if ((char)payload[0] == '2') {       // 2 - get status from D2 (connect D2 <---> D1) or D1 (relay pin)
         statusvalue = digitalRead(relayPin);
         if (statusvalue == HIGH) {
           client.publish(room_status, "ON");
@@ -247,7 +247,7 @@ void relay(boolean set)
   }
 }
 
-void setup_wifi() {
+void setupWifi() {
 
   WiFiManager wifiManager;
   String APName;
@@ -271,14 +271,41 @@ void setup_wifi() {
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
 
-  /*
+
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  WiFi.macAddress(mac);
+  Serial.print("MAC: ");
+  Serial.print(mac[5],HEX);
+  Serial.print(":");
+  Serial.print(mac[4],HEX);
+  Serial.print(":");
+  Serial.print(mac[3],HEX);
+  Serial.print(":");
+  Serial.print(mac[2],HEX);
+  Serial.print(":");
+  Serial.print(mac[1],HEX);
+  Serial.print(":");
+  Serial.println(mac[0],HEX);
+
+}
+
+void wifiReconnect()
+{
+
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.println();
+  Serial.println(WiFi.SSID());
+  Serial.println(WiFi.psk());
 
   //WiFi.config(ip,gateway,subnet);  // fix ip address
-  WiFi.begin(ssid, password);
+  WiFi.begin();
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -286,33 +313,9 @@ void setup_wifi() {
     wifi_reconnect++;
     if (wifi_reconnect > MAXRETRY) {
       wifi_reconnect = 0;
-
       break;
     }
   }
-
-  */
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  /*
-  WiFi.macAddress(mac);
-  Serial.print("MAC: ");
-  Serial.print(mac[0],HEX);
-  Serial.print(":");
-  Serial.print(mac[1],HEX);
-  Serial.print(":");
-  Serial.print(mac[2],HEX);
-  Serial.print(":");
-  Serial.print(mac[3],HEX);
-  Serial.print(":");
-  Serial.print(mac[4],HEX);
-  Serial.print(":");
-  Serial.println(mac[5],HEX);
-  */
 }
 
 void reconnect() {
@@ -345,7 +348,7 @@ void reconnect() {
       delay(5000);
     }
     mqtt_reconnect++;
-    if (mqtt_reconnect > MAXRETRY) {
+    if (mqtt_reconnect > 5) {
       mqtt_reconnect = 0;
 
       break;
@@ -438,7 +441,7 @@ void setup() {
 
   Serial.println(myRoom);
 
-  setup_wifi();
+  setupWifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
   if (client.connect(myRoom, mqtt_user, mqtt_password)) {
@@ -471,7 +474,7 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   if (WiFi.status() != WL_CONNECTED) {
-    setup_wifi();
+    setupWifi();
   }
   else {
     if (!client.connected()) {
@@ -489,6 +492,6 @@ void loop() {
     blink();
   }
   else {
-    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin 
+    digitalWrite(BUILTIN_LED, HIGH);  // on LED D4 pin
   }
 }

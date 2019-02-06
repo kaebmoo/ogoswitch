@@ -17,8 +17,8 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 
-// #define BLYNKLOCAL
-#define FARMLOCAL
+#define BLYNKLOCAL
+// #define FARMLOCAL
 #define THINGSBOARD
 
 // You should get Auth Token in the Blynk App.
@@ -26,11 +26,11 @@
 char auth[] = "634021991b694e08b004ca8b13f08bc1";
 char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
 
-char thingsboardServer[40] = "box.greenwing.email";
+char thingsboardServer[40] = "thingsboard.ogonan.com";
 int  mqttport = 1883;                      // 1883 or 1888
-char token[32] = "qxqW3i0uQEkji1sZfmy0";   // device token from thingsboard server
+char token[32] = "GytOdBkhNbMeHq74561I";   // device token from thingsboard server
 
-char c_thingsboardServer[41] = "192.168.2.64";
+char c_thingsboardServer[41] = "thingsboard.ogonan.com";
 char c_mqttport[8] = "1883";
 char c_token[33] = "12345678901234567890";
 char c_sendinterval[8] = "10000";
@@ -271,11 +271,11 @@ void sendSoilMoistureData()
   Serial.print( mappedValue3 );
   Serial.print( "]   -> " );
   
-  sendDatatoThingsboard("\"soil moisture 1\":", mappedValue1, "\"active 1\":", digitalRead(RELAY1));
+  sendDatatoThingsboard("\"soilMoisture1\":", mappedValue1, "\"active1\":", digitalRead(RELAY1));
   delay(100);
-  sendDatatoThingsboard("\"soil moisture 2\":", mappedValue2, "\"active 2\":", digitalRead(RELAY2));
+  sendDatatoThingsboard("\"soilMoisture2\":", mappedValue2, "\"active2\":", digitalRead(RELAY2));
   delay(100);
-  sendDatatoThingsboard("\"soil moisture 3\":", mappedValue3, "\"active 3\":", digitalRead(RELAY3));
+  sendDatatoThingsboard("\"soilMoisture3\":", mappedValue3, "\"active3\":", digitalRead(RELAY3));
 }
 
 void sendDatatoThingsboard(String field1, int value, String field2, int active)

@@ -23,8 +23,8 @@
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
-char auth[] = "634021991b694e08b004ca8b13f08bc1";
-char c_auth[33] = "634021991b694e08b004ca8b13f08bc1";           // authen token blynk
+char auth[] = "4029aaac53484ce79eac9343d66588d3";
+char c_auth[33] = "4029aaac53484ce79eac9343d66588d3";           // authen token blynk
 
 char thingsboardServer[40] = "thingsboard.ogonan.com";
 int  mqttport = 1883;                      // 1883 or 1888
@@ -351,6 +351,7 @@ void wifiConnect()
             retry2Connect++;
             if (retry2Connect >= 30) {
               offline = 1;
+              ondemandWiFi();
               break;
             }
           }
@@ -385,6 +386,7 @@ void ondemandWiFi()
     }
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
+  offline = 0;
   
   if (shouldSaveConfig) {
     Serial.println("Saving config...");

@@ -1,86 +1,77 @@
-/*
-  Debounce
+// Detect the falling edge of multiple buttons.
+// Eight buttons with internal pullups.
+// Toggles a LED when any button is pressed.
+// Buttons on pins 2,3,4,5,6,7,8,9
 
-  Each time the input pin goes from LOW to HIGH (e.g. because of a push-button
-  press), the output pin is toggled from LOW to HIGH or HIGH to LOW. There's a
-  minimum delay between toggles to debounce the circuit (i.e. to ignore noise).
+// Include the Bounce2 library found here :
+// https://github.com/thomasfredericks/Bounce2
+#include <Bounce2.h>
 
-  The circuit:
-  - LED attached from pin 13 to ground
-  - pushbutton attached from pin 2 to +5V
-  - 10 kilohm resistor attached from pin 2 to ground
+#define LED_PIN 13
 
-  - Note: On most Arduino boards, there is already an LED on the board connected
-    to pin 13, so you don't need any extra components for this example.
+#define NUM_BUTTONS 4
+const uint8_t BUTTON_PINS[NUM_BUTTONS] = {4, 5, 6, 7};
+// 4 limit switch 2nd floor
+// 5 limit switch 1st floor
+// 6 up
+// 7 down
 
-  created 21 Nov 2006
-  by David A. Mellis
-  modified 30 Aug 2011
-  by Limor Fried
-  modified 28 Dec 2012
-  by Mike Walters
-  modified 30 Aug 2016
-  by Arturo Guadalupi
+int ledState = LOW;
 
-  This example code is in the public domain.
-
-  http://www.arduino.cc/en/Tutorial/Debounce
-*/
-
-// constants won't change. They're used here to set pin numbers:
-const int buttonPin = 2;    // the number of the pushbutton pin
-const int ledPin = 13;      // the number of the LED pin
-
-// Variables will change:
-int ledState = HIGH;         // the current state of the output pin
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
-
-// the following variables are unsigned longs because the time, measured in
-// milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
+Bounce * buttons = new Bounce[NUM_BUTTONS];
 
 void setup() {
-  pinMode(buttonPin, INPUT);
-  pinMode(ledPin, OUTPUT);
 
-  // set initial LED state
-  digitalWrite(ledPin, ledState);
+  for (int i = 0; i < NUM_BUTTONS; i++) {
+    buttons[i].attach( BUTTON_PINS[i] , INPUT_PULLUP  );       //setup the bounce instance for the current button
+    buttons[i].interval(25);              // interval in ms
+  }
+
+  // Setup the LED :
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, ledState);
+
+
 }
 
 void loop() {
-  // read the state of the switch into a local variable:
-  int reading = digitalRead(buttonPin);
 
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH), and you've waited long enough
-  // since the last press to ignore any noise:
+  bool needToToggleLed = false;
 
-  // If the switch changed, due to noise or pressing:
-  if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
+  buttons[0]update();
+  buttons[1]update();
+  buttons[2]update();
+  buttons[3]update();
+
+  if (buttons[0].rose() ) { // limit switch 2nd floor
+    digitalWrite(8, LOW);
   }
-
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer than the debounce
-    // delay, so take it as the actual current state:
-
-    // if the button state has changed:
-    if (reading != buttonState) {
-      buttonState = reading;
-
-      // only toggle the LED if the new button state is HIGH
-      if (buttonState == HIGH) {
-        ledState = !ledState;
-      }
+  if (buttons[1].rose() ) { // limit switch 1st floor
+    digitalWrite(9, LOW);
+  }
+  if (buttons[2].rose() ) { // Relay 1 up
+    digitalWrite(8, HIGH);
+  }
+  if (buttons[3].rose() ) { // Relay 2 down
+    digitalWrite(9, HIGH);
+  }
+  
+  
+  for (int i = 0; i < NUM_BUTTONS; i++)  {
+    // Update the Bounce instance :
+    buttons[i].update();
+    // If it fell, flag the need to toggle the LED
+    if ( buttons[i].fell() ) {
+      needToToggleLed = true;
     }
   }
 
-  // set the LED:
-  digitalWrite(ledPin, ledState);
+  // if a LED toggle has been flagged :
+  if ( needToToggleLed ) {
+    // Toggle LED state :
+    ledState = !ledState;
+    digitalWrite(LED_PIN, ledState);
+  }
 
-  // save the reading. Next time through the loop, it'll be the lastButtonState:
-  lastButtonState = reading;
+
 }

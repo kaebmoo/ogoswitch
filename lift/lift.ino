@@ -24,7 +24,7 @@ int ledState = LOW;
 unsigned long previousMillis = 0;        // will store last time LED was updated
 
 // constants won't change:
-const long interval = 500;           // interval at which to blink (milliseconds)
+const long interval = 1000;           // interval at which to blink (milliseconds)
 
 
 Bounce * buttons = new Bounce[NUM_BUTTONS];
@@ -33,6 +33,9 @@ Bounce * buttons = new Bounce[NUM_BUTTONS];
 #define RELAY2  9
 #define LAMP1   10
 #define LAMP2   11
+
+bool limitUp = false;
+bool limitDown = false; 
 
 void setup() {
 
@@ -60,6 +63,7 @@ void setup() {
 void loop() {
 
   bool needToToggleLed = false;
+  int limitUpPin, limitDownPin;
 
   buttons[0].update();
   buttons[1].update();
@@ -67,39 +71,54 @@ void loop() {
   buttons[3].update();
   buttons[4].update();
 
+  limitUpPin = digitalRead(BUTTON_PINS[0]);
+  limitDownPin = digitalRead(BUTTON_PINS[1]);
+  
   if (buttons[4].rose() ) {     // emergency switch
     digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
     digitalWrite(LAMP1, LOW);
     digitalWrite(LAMP2, LOW);
   }
-  if (buttons[0].rose() ) { // limit switch 2nd floor
+  if (buttons[0].rose() || limitUpPin == HIGH) { // limit switch 2nd floor
     Serial.println("Limit Switch 2nd floor");
     digitalWrite(RELAY1, LOW);
+    digitalWrite(RELAY2, LOW);
     delay(500);
     digitalWrite(LAMP1, LOW);   // Lamp 1
+    limitUp = true;
+    limitDown = false;
   }
-  if (buttons[1].rose() ) { // limit switch 1st floor
+  if (buttons[1].rose() || limitDownPin == HIGH) { // limit switch 1st floor
     Serial.println("Limit Switch 1st floor");
+    digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
     delay(500);
     digitalWrite(LAMP2, LOW);   // Lamp 2
+    limitDown = true;
+    limitUp = false;
   }
   if (buttons[2].rose() ) { // Relay 1 up
     Serial.println("Up Button");
     delay(500);
-    digitalWrite(RELAY2, LOW);
-    delay(500);
-    digitalWrite(RELAY1, HIGH);    
-    digitalWrite(LAMP1, HIGH);   // Lamp 1
+    limitUpPin = digitalRead(BUTTON_PINS[0]);
+    if (limitUpPin == LOW) {
+      digitalWrite(RELAY2, LOW);
+      delay(3000);
+      digitalWrite(RELAY1, HIGH);    
+      digitalWrite(LAMP1, HIGH);   // Lamp 1      
+    }
   }
   if (buttons[3].rose() ) { // Relay 2 down
     Serial.println("Down Button");
     delay(500);
-    digitalWrite(RELAY1, LOW);
-    delay(500);
-    digitalWrite(RELAY2, HIGH); 
-    digitalWrite(LAMP2, HIGH);   // Lamp 2
+    limitDownPin = digitalRead(BUTTON_PINS[1]);
+    if (limitDownPin == LOW) {
+      digitalWrite(RELAY1, LOW);
+      delay(3000);
+      digitalWrite(RELAY2, HIGH); 
+      digitalWrite(LAMP2, HIGH);   // Lamp 2  
+    }    
   }
   
   /*

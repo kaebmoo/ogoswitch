@@ -322,6 +322,7 @@ void wifiConnect()
   Serial.println(WiFi.psk());
   String SSID = WiFi.SSID();
   String PSK = WiFi.psk();
+  
   WiFi.begin();
   Serial.print("Connecting");
   Serial.println();

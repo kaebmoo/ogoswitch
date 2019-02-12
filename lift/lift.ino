@@ -9,12 +9,14 @@
 
 #define LED_PIN 13
 
-#define NUM_BUTTONS 4
-const uint8_t BUTTON_PINS[NUM_BUTTONS] = {4, 5, 6, 7};
+#define NUM_BUTTONS 5
+const uint8_t BUTTON_PINS[NUM_BUTTONS] = {4, 5, 6, 7, 3};
+
 // 4 limit switch 2nd floor
 // 5 limit switch 1st floor
 // 6 up
 // 7 down
+// 3 Emergency
 
 int ledState = LOW;
 // Generally, you should use "unsigned long" for variables that hold time
@@ -27,6 +29,11 @@ const long interval = 500;           // interval at which to blink (milliseconds
 
 Bounce * buttons = new Bounce[NUM_BUTTONS];
 
+#define RELAY1  8
+#define RELAY2  9
+#define LAMP1   10
+#define LAMP2   11
+
 void setup() {
 
   Serial.begin(9600);
@@ -37,12 +44,17 @@ void setup() {
 
   // Setup the LED :
   pinMode(LED_PIN, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(9, OUTPUT);
+  pinMode(RELAY1, OUTPUT);
+  pinMode(RELAY2, OUTPUT);
+  pinMode(LAMP1, OUTPUT);
+  pinMode(LAMP2, OUTPUT);
   digitalWrite(LED_PIN, ledState);
   Serial.println();
   Serial.println("Starting");
-
+  digitalWrite(RELAY1, LOW);
+  digitalWrite(RELAY2, LOW);
+  digitalWrite(LAMP1, LOW);
+  digitalWrite(LAMP2, LOW);
 }
 
 void loop() {
@@ -53,34 +65,41 @@ void loop() {
   buttons[1].update();
   buttons[2].update();
   buttons[3].update();
+  buttons[4].update();
 
+  if (buttons[4].rose() ) {
+    digitalWrite(RELAY1, LOW);
+    digitalWrite(RELAY2, LOW);
+    digitalWrite(LAMP1, LOW);
+    digitalWrite(LAMP2, LOW);
+  }
   if (buttons[0].rose() ) { // limit switch 2nd floor
     Serial.println("Limit Switch 2nd floor");
-    digitalWrite(8, LOW);
+    digitalWrite(RELAY1, LOW);
     delay(500);
-    digitalWrite(10, LOW);   // Lamp 1
+    digitalWrite(LAMP1, LOW);   // Lamp 1
   }
   if (buttons[1].rose() ) { // limit switch 1st floor
     Serial.println("Limit Switch 1st floor");
-    digitalWrite(9, LOW);
+    digitalWrite(RELAY2, LOW);
     delay(500);
-    digitalWrite(11, LOW);   // Lamp 2
+    digitalWrite(LAMP2, LOW);   // Lamp 2
   }
   if (buttons[2].rose() ) { // Relay 1 up
     Serial.println("Up Button");
     delay(500);
-    digitalWrite(9, LOW);
+    digitalWrite(RELAY2, LOW);
     delay(500);
-    digitalWrite(8, HIGH);    
-    digitalWrite(10, HIGH);   // Lamp 1
+    digitalWrite(RELAY1, HIGH);    
+    digitalWrite(LAMP1, HIGH);   // Lamp 1
   }
   if (buttons[3].rose() ) { // Relay 2 down
     Serial.println("Down Button");
     delay(500);
-    digitalWrite(8, LOW);
+    digitalWrite(RELAY1, LOW);
     delay(500);
-    digitalWrite(9, HIGH); 
-    digitalWrite(11, HIGH);   // Lamp 2
+    digitalWrite(RELAY2, HIGH); 
+    digitalWrite(LAMP2, HIGH);   // Lamp 2
   }
   
   /*

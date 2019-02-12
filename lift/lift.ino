@@ -67,7 +67,7 @@ void loop() {
   buttons[3].update();
   buttons[4].update();
 
-  if (buttons[4].rose() ) {
+  if (buttons[4].rose() ) {     // emergency switch
     digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
     digitalWrite(LAMP1, LOW);

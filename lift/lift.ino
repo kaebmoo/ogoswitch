@@ -103,7 +103,10 @@ void loop() {
     Serial.println("Up Button");
     delay(500);
     limitUpPin = digitalRead(BUTTON_PINS[0]); // prevent
+    Serial.print("Limit Up Pin: ");
+    Serial.println(limitUpPin);
     if (limitUpPin == LOW) {       // if HIGH lift position is limit
+      Serial.println("Relay1 ON");
       digitalWrite(RELAY2, LOW);
       delay(3000);                 // delay for protect motor
       digitalWrite(RELAY1, HIGH);
@@ -114,7 +117,10 @@ void loop() {
     Serial.println("Down Button");
     delay(500);
     limitDownPin = digitalRead(BUTTON_PINS[1]);
+    Serial.print("Limit Down Pin: ");
+    Serial.println(limitDownPin);
     if (limitDownPin == LOW) {
+      Serial.println("Relay2 ON");
       digitalWrite(RELAY1, LOW);
       delay(3000);                 // delay for protect motor
       digitalWrite(RELAY2, HIGH);

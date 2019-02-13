@@ -98,9 +98,9 @@ void loop() {
       digitalWrite(RELAY1, LOW);
       digitalWrite(RELAY2, LOW);
       delay(500);
-      digitalWrite(LAMP2, LOW);   // Lamp 2
-      limitDown = true;
+      digitalWrite(LAMP2, LOW);   // Lamp 2      
       limitUp = false;
+      limitDown = true;
     }
 
   }
@@ -116,8 +116,8 @@ void loop() {
       delay(3000);                 // delay for protect motor
       digitalWrite(RELAY1, HIGH);
       digitalWrite(LAMP1, HIGH);   // Lamp 1
-      limitUp = true;
-      limitDown = false;
+      limitUp = false;
+      limitDown = true;
     }
   }
   if (buttons[3].rose() ) { // Relay 2 down
@@ -132,8 +132,8 @@ void loop() {
       delay(3000);                 // delay for protect motor
       digitalWrite(RELAY2, HIGH);
       digitalWrite(LAMP2, HIGH);   // Lamp 2
-      limitUp = false;
-      limitDown = true;
+      limitUp = true;
+      limitDown = false;
     }
   }
 

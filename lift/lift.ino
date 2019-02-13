@@ -83,23 +83,23 @@ void loop() {
   }
   if (buttons[0].rose() || limitUpPin == HIGH) { // limit switch 2nd floor, turn off
     Serial.println("Limit Switch 2nd floor");
-    if (limitUp != true) {
+    if (limitUp == false) {
       digitalWrite(RELAY1, LOW);
       digitalWrite(RELAY2, LOW);
       delay(500);
       digitalWrite(LAMP1, LOW);   // Lamp 1
       limitUp = true;
-      limitDown = false;
+      limitDown = false; //
     }
   }
   if (buttons[1].rose() || limitDownPin == HIGH) { // limit switch 1st floor, turn off
     Serial.println("Limit Switch 1st floor");
-    if (limitDown != true) {
+    if (limitDown == false) {
       digitalWrite(RELAY1, LOW);
       digitalWrite(RELAY2, LOW);
       delay(500);
       digitalWrite(LAMP2, LOW);   // Lamp 2      
-      limitUp = false;
+      limitUp = false; //
       limitDown = true;
     }
 
@@ -117,7 +117,7 @@ void loop() {
       digitalWrite(RELAY1, HIGH);
       digitalWrite(LAMP1, HIGH);   // Lamp 1
       limitUp = false;
-      limitDown = true;
+      limitDown = true;  //
     }
   }
   if (buttons[3].rose() ) { // Relay 2 down
@@ -132,7 +132,7 @@ void loop() {
       delay(3000);                 // delay for protect motor
       digitalWrite(RELAY2, HIGH);
       digitalWrite(LAMP2, HIGH);   // Lamp 2
-      limitUp = true;
+      limitUp = true;  //
       limitDown = false;
     }
   }

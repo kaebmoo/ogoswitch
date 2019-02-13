@@ -35,7 +35,7 @@ Bounce * buttons = new Bounce[NUM_BUTTONS];
 #define LAMP2   11
 
 bool limitUp = false;
-bool limitDown = false; 
+bool limitDown = false;
 
 void setup() {
 
@@ -54,6 +54,7 @@ void setup() {
   digitalWrite(LED_PIN, ledState);
   Serial.println();
   Serial.println("Starting");
+  // reset all relay
   digitalWrite(RELAY1, LOW);
   digitalWrite(RELAY2, LOW);
   digitalWrite(LAMP1, LOW);
@@ -71,16 +72,16 @@ void loop() {
   buttons[3].update();
   buttons[4].update();
 
-  limitUpPin = digitalRead(BUTTON_PINS[0]);
-  limitDownPin = digitalRead(BUTTON_PINS[1]);
-  
+  limitUpPin = digitalRead(BUTTON_PINS[0]);   // limit switch 2nd floor, Normal Open Switch - NO
+  limitDownPin = digitalRead(BUTTON_PINS[1]); // limit switch 1st floor, Normal Open Switch - NO
+
   if (buttons[4].rose() ) {     // emergency switch
     digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
     digitalWrite(LAMP1, LOW);
     digitalWrite(LAMP2, LOW);
   }
-  if (buttons[0].rose() || limitUpPin == HIGH) { // limit switch 2nd floor
+  if (buttons[0].rose() || limitUpPin == HIGH) { // limit switch 2nd floor, turn off
     Serial.println("Limit Switch 2nd floor");
     digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
@@ -89,7 +90,7 @@ void loop() {
     limitUp = true;
     limitDown = false;
   }
-  if (buttons[1].rose() || limitDownPin == HIGH) { // limit switch 1st floor
+  if (buttons[1].rose() || limitDownPin == HIGH) { // limit switch 1st floor, turn off
     Serial.println("Limit Switch 1st floor");
     digitalWrite(RELAY1, LOW);
     digitalWrite(RELAY2, LOW);
@@ -101,12 +102,12 @@ void loop() {
   if (buttons[2].rose() ) { // Relay 1 up
     Serial.println("Up Button");
     delay(500);
-    limitUpPin = digitalRead(BUTTON_PINS[0]);
-    if (limitUpPin == LOW) {
+    limitUpPin = digitalRead(BUTTON_PINS[0]); // prevent
+    if (limitUpPin == LOW) {       // if HIGH lift position is limit
       digitalWrite(RELAY2, LOW);
-      delay(3000);
-      digitalWrite(RELAY1, HIGH);    
-      digitalWrite(LAMP1, HIGH);   // Lamp 1      
+      delay(3000);                 // delay for protect motor
+      digitalWrite(RELAY1, HIGH);
+      digitalWrite(LAMP1, HIGH);   // Lamp 1
     }
   }
   if (buttons[3].rose() ) { // Relay 2 down
@@ -115,12 +116,12 @@ void loop() {
     limitDownPin = digitalRead(BUTTON_PINS[1]);
     if (limitDownPin == LOW) {
       digitalWrite(RELAY1, LOW);
-      delay(3000);
-      digitalWrite(RELAY2, HIGH); 
-      digitalWrite(LAMP2, HIGH);   // Lamp 2  
-    }    
+      delay(3000);                 // delay for protect motor
+      digitalWrite(RELAY2, HIGH);
+      digitalWrite(LAMP2, HIGH);   // Lamp 2
+    }
   }
-  
+
   /*
   for (int i = 0; i < NUM_BUTTONS; i++)  {
     // Update the Bounce instance :

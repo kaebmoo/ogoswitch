@@ -101,9 +101,9 @@ int sendinterval = 60;                                       // send data interv
 #define TRIGGER_PIN D3                      // GPIO 0
 const int analogReadPin = A0;               // read for set options Soil Moisture or else ...
 #ifndef SLEEP
-const int RELAY1 = D4;                      // GPIO 5                     
-const int RELAY2 = D5;                        
-const int RELAY3 = D6;                       
+const int RELAY1 = D4;                      // GPIO 5
+const int RELAY2 = D5;
+const int RELAY3 = D6;
 #endif
 
 #ifdef SLEEP
@@ -207,7 +207,7 @@ void setup() {
     }
     #endif
 
-    
+
     #ifdef THINGSPEAK
     ThingSpeak.begin( client );
     timer.setInterval(sendinterval * 1000, sendThingSpeak);
@@ -222,12 +222,12 @@ void setup() {
     #endif
 
     #ifdef MULTISENSOR
-      ads1015.begin();  // Initialize ads1015    
+      ads1015.begin();  // Initialize ads1015
       ads1015.setGain(GAIN_ONE);     // 1x gain   +/- 4.096V  1 bit = 2mV
     #endif
-    
+
     #ifdef SLEEP
-      ads1015.begin();  // Initialize ads1015    
+      ads1015.begin();  // Initialize ads1015
       ads1015.setGain(GAIN_ONE);     // 1x gain   +/- 4.096V  1 bit = 2mV
       soilMoistureSensor();
       #ifdef THINGSPEAK
@@ -242,10 +242,10 @@ void setup() {
       }
       sendSoilMoistureData();
       #endif
-    
+
     Serial.println("I'm going to sleep.");
     Serial.println("Goodnight folks!");
-    
+
     delay(15000);
     ESP.deepSleep(sleepSeconds * 1000000);
     #endif
@@ -263,7 +263,7 @@ void loop() {
   if ( !mqttClient.connected() ) {
     reconnect();
   }
-  
+
   mqttClient.loop();
   #endif
   // soilMoistureSensor();
@@ -410,9 +410,9 @@ void sendSoilMoistureData()
 
   // Prepare a JSON payload string
   String payload = "{";
-  payload += "\"soil moisture 1\":";  payload += mappedValue1; payload += ",";
-  payload += "\"soil moisture 2\":";  payload += mappedValue2; payload += ",";
-  payload += "\"soil moisture 3\":";  payload += mappedValue3; payload += ",";
+  payload += "\"soilMoisture1\":";  payload += mappedValue1; payload += ",";
+  payload += "\"soilMoisture2\":";  payload += mappedValue2; payload += ",";
+  payload += "\"soilMoisture3\":";  payload += mappedValue3; payload += ",";
   #ifdef SLEEP
   float volt = checkBattery();
   payload += "\"battery\":"; payload += volt; payload += ",";
@@ -446,12 +446,12 @@ void wifiConnect()
   int retry2Connect = 0;
   String SSID = WiFi.SSID();
   String PSK = WiFi.psk();
-  
+
   WiFi.mode(WIFI_STA);
   Serial.println();
   Serial.println(WiFi.SSID());
   Serial.println(WiFi.psk());
-  
+
   WiFi.begin();
   Serial.print("Connecting");
   Serial.println();
@@ -475,13 +475,13 @@ void wifiConnect()
       break;
     }
   }
-  
+
   Serial.println();
   if (offline == 0) {
     Serial.print("Connected, IP address: ");
     Serial.println(WiFi.localIP());
   }
-  
+
   Serial.println();
 }
 
@@ -491,7 +491,7 @@ void ondemandWiFi()
 
   wifiManager.setBreakAfterConfig(true);
   wifiManager.setConfigPortalTimeout(60);
-  
+
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", c_thingsboardServer, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", c_mqttport, 7);
   WiFiManagerParameter custom_sendinterval("interval", "send data interval time (second)", c_sendinterval, 7);
@@ -595,7 +595,7 @@ void readConfig()
   #ifdef SLEEP
   memset(c_sleepSeconds, 0, sizeof(c_sleepSeconds));
   #endif
-  
+
   readEEPROM(thingsboardServer, 0, 40);
   readEEPROM(c_mqttport, 40, 7);
   sendinterval = eeGetInt(47);
@@ -604,7 +604,7 @@ void readConfig()
   readEEPROM(writeAPIKey, 112, 32); // thingspeak write api key
   mqttport = atoi(c_mqttport);
   #ifdef SLEEP
-  sleepSeconds = eeGetInt(144); 
+  sleepSeconds = eeGetInt(144);
   #endif
 
   Serial.println();
@@ -743,15 +743,15 @@ float checkBattery()
 
   #ifdef SLEEP
   int16_t adc0;
-  
+
   adc0 = ads1015.readADC_SingleEnded(0);
-  
+
   volt = ((float) adc0 * 3.0) / 1000.0;
   Serial.print("Analog read A1: ");
   Serial.println(adc0);
   #endif
-  
-  
+
+
 
   // String v = String(volt);
   Serial.print("Battery voltage: ");

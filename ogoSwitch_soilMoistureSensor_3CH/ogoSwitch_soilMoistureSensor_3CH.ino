@@ -55,9 +55,9 @@ SOFTWARE.
 #include <Adafruit_ADS1015.h>
 
 
-// #define BLYNKLOCAL
+#define BLYNKLOCAL
 // #define SLEEP
-#define FARMLOCAL
+// #define FARMLOCAL
 #define THINGSBOARD
 // #define THINGSPEAK
 #define MULTISENSOR
@@ -78,9 +78,9 @@ unsigned long channelID = 360709;
 char *readAPIKey = "GNZ8WEU763Z5DUEA";
 char *writeAPIKey = "8M07EYX8NPCD9V8U";
 
-char thingsboardServer[40] = "box.greenwing.email";
+char thingsboardServer[40] = "thingsboard.ogonan.com";
 int  mqttport = 1883;                      // 1883 or 1888
-char token[32] = "YR2HefpIxXZY9DEk1Dvv";   // device token from thingsboard server
+char token[32] = "GytOdBkhNbMeHq74561I";   // device token from thingsboard server
 
 char c_thingsboardServer[41] = "192.168.1.10";
 char c_mqttport[8] = "1883";
@@ -122,7 +122,7 @@ const int MAXRETRY=5;
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
-int maxADC = 928;                     // replace with max ADC value read fully submerged in water
+int maxADC = 1440;                     // replace with max ADC value read fully submerged in water
 int soilMoistureSetPoint =  50;
 int soilMoistureSetPoint1 = 50;
 int soilMoistureSetPoint2 = 50;
@@ -408,20 +408,30 @@ void sendSoilMoistureData()
   Serial.print( mappedValue );
   Serial.print( "]   -> " );
 
+  sendDatatoThingsboard("\"soilMoisture1\":", mappedValue1, "\"active1\":", digitalRead(RELAY1));
+  delay(100);
+  sendDatatoThingsboard("\"soilMoisture2\":", mappedValue2, "\"active2\":", digitalRead(RELAY2));
+  delay(100);
+  sendDatatoThingsboard("\"soilMoisture3\":", mappedValue3, "\"active3\":", digitalRead(RELAY3));
+
+}
+
+void sendDatatoThingsboard(String field1, int value, String field2, int active)
+{
+
   // Prepare a JSON payload string
   String payload = "{";
-  payload += "\"soilMoisture1\":";  payload += mappedValue1; payload += ",";
-  payload += "\"soilMoisture2\":";  payload += mappedValue2; payload += ",";
-  payload += "\"soilMoisture3\":";  payload += mappedValue3; payload += ",";
+  payload += field1;  payload += value; payload += ",";
+  
   #ifdef SLEEP
   float volt = checkBattery();
   payload += "\"battery\":"; payload += volt; payload += ",";
   #endif
-  payload += "\"active\":"; payload += digitalRead(RELAY1) ? true : false;
+  payload += field2; payload += active ? true : false;
   payload += "}";
 
   // Send payload
-  char attributes[100];
+  char attributes[128];
   payload.toCharArray( attributes, 128 );
   mqttClient.publish( "v1/devices/me/telemetry", attributes );
   Serial.println( attributes );

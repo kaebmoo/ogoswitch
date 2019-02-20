@@ -133,6 +133,7 @@ int range1 = 20;
 int range2 = 20;
 int range3 = 20;
 
+unsigned long lastMqttConnectionAttempt = 0;
 const long interval = 1000;
 int ledState = LOW;
 unsigned long previousMillis = 0;
@@ -866,43 +867,40 @@ void set_gpio_status(int pin, boolean enabled) {
 
 }
 
-void reconnect()
+bool reconnect() 
 {
-  // Loop until we're reconnected
 
+  unsigned long now = millis();
+  
+  if (1000 > now - lastMqttConnectionAttempt) {
+    // Do not repeat within 1 sec.
+    return false;
+  }
+  Serial.println("Connecting to MQTT server...");
 
-  while (!mqttClient.connected()) {
+  if (!mqttClient.connected()) {
+    if (WiFi.status() != WL_CONNECTED) {
+      wifiConnect();
+    }
     Serial.print("Attempting MQTT connection...");
-
     // Attempt to connect
     #ifdef THINGSBOARD
     if (mqttClient.connect(myRoom, token, NULL)) {  // connect to thingsboards
     #else
     if (mqttClient.connect(myRoom, mqtt_user, mqtt_password)) {  // connect to thingsboards
     #endif
-      Serial.print("connected : ");
-      Serial.println(thingsboardServer); // mqtt_server
-
-
-
+      Serial.println("Connected!");  
       // Once connected, publish an announcement...
       // mqttClient.publish(roomStatus, "hello world");
-
-    } else {
-      Serial.print("failed, reconnecting state = ");
-      Serial.print(mqttClient.state());
-      Serial.print(" try : ");
-      Serial.print(mqtt_reconnect+1);
-      Serial.println(" try again in 2 seconds");
-      // Wait 2 seconds before retrying
-      delay(2000);
     }
-    mqtt_reconnect++;
-    if (mqtt_reconnect > MAXRETRY) {
-      mqtt_reconnect = 0;
-      break;
+    else {
+      lastMqttConnectionAttempt = now;
+      return false;  
     }
+    
   }
+
+  return true;
 }
 
 void upintheAir()

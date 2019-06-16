@@ -26,7 +26,7 @@ SOFTWARE.
 /* Comment this out to disable prints and save space */
 // #define BLYNK_PRINT Serial
 // #define BLYNK_DEBUG // Optional, this enables lots of prints
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
 // #define MQTT
 
 #include <PubSubClient.h>
@@ -127,7 +127,7 @@ Timer t_settime, checkFirmware, pirTimer;
 BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
-int checkState = 0;
+int checkState = -1;
 int overlap = 0;
 
 #include "CheckValidTime.h" // OOP experiment
@@ -231,6 +231,8 @@ void setup() {
   checkFirmware.every(86400000L, upintheair);
   checkBlynkConnection();
   upintheair();
+
+  timerStatus.setTimeout(1500L, doAfterSetup);
 }
 
 void loop() {
@@ -267,6 +269,18 @@ void loop() {
   }
 
   Alarm.delay(0);
+}
+
+void doAfterSetup()
+{
+  int state = digitalRead(relayPin);
+
+  Serial.print("doAfterSetup Relay pin status: ");
+  Serial.println(state);
+
+  if (state == 0) {
+    Blynk.virtualWrite(V2, 0);
+  }
 }
 
 void relayStatus()
@@ -446,9 +460,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     bcurrent = true;
 
   }
-
-
-
 }
 
 void relayOn()
@@ -561,7 +572,7 @@ void setup_wifi()
     delay(500);
     Serial.print(".");
     wifi_reconnect++;
-    if (wifi_reconnect > MAXRETRY) {
+    if (wifi_reconnect > MAXRETRY+60) {
       wifi_reconnect = 0;
       ondemandWiFi();
       break;
@@ -881,16 +892,19 @@ BLYNK_CONNECTED()
   Serial.println("Blynk Connected");
   rtc.begin();
 
+  // Blynk.syncVirtual(V2);
 
   // Blynk.syncAll();
   Blynk.syncVirtual(V10);
   Blynk.syncVirtual(V20);
   Blynk.syncVirtual(V21);
   Blynk.syncVirtual(V22);
-  Blynk.syncVirtual(V2);
+  
   Blynk.syncVirtual(V1);
   Blynk.syncVirtual(V11);
   Blynk.syncVirtual(V12);
+
+  
 }
 
 BLYNK_WRITE(V2)

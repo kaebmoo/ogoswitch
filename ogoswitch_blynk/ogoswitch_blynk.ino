@@ -226,13 +226,14 @@ void setup() {
   timerStatus.setInterval(1000L, d1Status);
   timerStatus.setInterval(1000L, relayPrintStatus);
 
-  // timerStatus.setInterval(1000L, syncSchedule);
+  
   checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   checkBlynkConnection();
   upintheair();
 
   timerStatus.setTimeout(1500L, doAfterSetup);
+  timerStatus.setInterval(5000L, doAfterSetup);
 }
 
 void loop() {
@@ -279,6 +280,7 @@ void doAfterSetup()
   Serial.println(state);
 
   if (state == 0) {
+    led1.off();
     Blynk.virtualWrite(V2, 0);
   }
 }

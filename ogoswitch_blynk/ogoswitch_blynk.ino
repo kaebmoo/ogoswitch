@@ -127,7 +127,7 @@ Timer t_settime, checkFirmware, pirTimer;
 BlynkTimer timerStatus, checkConnectionTimer;
 WidgetLED led1(1);
 WidgetRTC rtc;
-int checkState = 0;
+int checkState = -1;
 int overlap = 0;
 
 #include "CheckValidTime.h" // OOP experiment
@@ -226,11 +226,14 @@ void setup() {
   timerStatus.setInterval(1000L, d1Status);
   timerStatus.setInterval(1000L, relayPrintStatus);
 
-  // timerStatus.setInterval(1000L, syncSchedule);
+  
   checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
   checkFirmware.every(86400000L, upintheair);
   checkBlynkConnection();
   upintheair();
+
+  timerStatus.setTimeout(1500L, doAfterSetup);
+  timerStatus.setInterval(5000L, doAfterSetup);
 }
 
 void loop() {
@@ -267,6 +270,19 @@ void loop() {
   }
 
   Alarm.delay(0);
+}
+
+void doAfterSetup()
+{
+  int state = digitalRead(relayPin);
+
+  Serial.print("doAfterSetup Relay pin status: ");
+  Serial.println(state);
+
+  if (state == 0) {
+    led1.off();
+    Blynk.virtualWrite(V2, 0);
+  }
 }
 
 void relayStatus()
@@ -446,9 +462,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     bcurrent = true;
 
   }
-
-
-
 }
 
 void relayOn()
@@ -881,16 +894,19 @@ BLYNK_CONNECTED()
   Serial.println("Blynk Connected");
   rtc.begin();
 
+  // Blynk.syncVirtual(V2);
 
   // Blynk.syncAll();
   Blynk.syncVirtual(V10);
   Blynk.syncVirtual(V20);
   Blynk.syncVirtual(V21);
   Blynk.syncVirtual(V22);
-  Blynk.syncVirtual(V2);
+  
   Blynk.syncVirtual(V1);
   Blynk.syncVirtual(V11);
   Blynk.syncVirtual(V12);
+
+  
 }
 
 BLYNK_WRITE(V2)

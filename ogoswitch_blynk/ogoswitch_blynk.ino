@@ -26,7 +26,7 @@ SOFTWARE.
 /* Comment this out to disable prints and save space */
 // #define BLYNK_PRINT Serial
 // #define BLYNK_DEBUG // Optional, this enables lots of prints
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
 // #define MQTT
 
 #include <PubSubClient.h>
@@ -561,7 +561,7 @@ void setup_wifi()
     delay(500);
     Serial.print(".");
     wifi_reconnect++;
-    if (wifi_reconnect > MAXRETRY) {
+    if (wifi_reconnect > MAXRETRY+60) {
       wifi_reconnect = 0;
       ondemandWiFi();
       break;

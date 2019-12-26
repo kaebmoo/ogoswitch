@@ -115,16 +115,20 @@ const int MAXRETRY=5;
 
 // soil moisture variables
 int minADC = 0;                       // replace with min ADC value read in air
-int maxADC = 1440;                     // replace with max ADC value read fully submerged in water
+int maxADC = 1440;             // replace with max ADC value read fully submerged in water
+int soilMoistureSetPoint = 50;
 int soilMoistureSetPoint0 = 50;
 int soilMoistureSetPoint1 = 50;
 int soilMoistureSetPoint2 = 50;
 int soilMoistureSetPoint3 = 50;
-int soilMoisture, mappedValue0, mappedValue1, mappedValue2, mappedValue3;
+int soilMoisture;
+int mappedValue, mappedValue0, mappedValue1, mappedValue2, mappedValue3;
+int range = 20;
 int range0 = 20;
 int range1 = 20;
 int range2 = 20;
 int range3 = 20;
+int active = 0;
 int active0 = 0;
 int active1 = 0;
 int active2 = 0;
@@ -250,7 +254,8 @@ void setup() {
     ESP.deepSleep(sleepSeconds * 1000000);
     #endif
     upintheAir();
-    timer.setInterval(1000, soilMoistureSensor0);
+    // timer.setInterval(1000, soilMoistureSensor0);
+    timer.setInterval(1000, soilMoistureSensor);
   }
 }
 
@@ -276,6 +281,41 @@ void loop() {
   #endif
   checkConnectionTimer.run();
   timer.run();
+}
+
+void soilMoistureSensor()
+{
+  soilMoisture = analogRead(analogReadPin);
+  Serial.print("Analog Read A0: ");
+  Serial.print(soilMoisture);
+  Serial.print(", " );
+  // soilMoisture = ads1015.readADC_SingleEnded(0);
+  // Serial.print("Analog Read 0 : ");
+  // Serial.print(soilMoisture);
+  // Serial.print(", " );
+
+  mappedValue0 = map(soilMoisture, minADC, maxADC, 0, 100);
+
+
+  // print mapped results to the serial monitor:
+  Serial.print("Moisture value = " );
+  Serial.println(mappedValue);
+
+  if (mappedValue > (soilMoistureSetPoint + range)) {
+    Serial.println("High Moisture");
+    Serial.println("Soil Moisture: Turn Relay Off");
+    // digitalWrite(RELAY0, LOW);
+    active = 0;
+    // status 
+    // led0.off();
+  }
+  else if (mappedValue < (soilMoistureSetPoint - range)) {
+    Serial.println("Low Moisture");
+    Serial.println("Soil Moisture: Turn Relay On");
+    // digitalWrite(RELAY0, HIGH);
+    active = 1;
+    // led0.on();
+  }
 }
 
 void soilMoistureSensor0()

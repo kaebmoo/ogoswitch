@@ -294,7 +294,7 @@ void soilMoistureSensor()
   // Serial.print(soilMoisture);
   // Serial.print(", " );
 
-  mappedValue0 = map(soilMoisture, minADC, maxADC, 0, 100);
+  mappedValue = map(soilMoisture, minADC, maxADC, 0, 100);
 
 
   // print mapped results to the serial monitor:

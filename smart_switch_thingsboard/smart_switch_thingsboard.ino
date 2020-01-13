@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#define THINGSBOARD
+
 #include <EEPROM.h>
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
@@ -97,6 +99,7 @@ void setup() {
 
   readConfig();
   setupWifi();
+  setupMqtt();
 }
 
 void loop() {
@@ -137,7 +140,7 @@ void readConfig()
     Serial.println(nodeID);
     Serial.print("Device token : ");
     Serial.println(token);
-    Serial.print("Client ID");
+    Serial.print("Client ID : ");
     Serial.println(clientID);
   }
 }
@@ -328,6 +331,8 @@ void reconnect()
 void callback(char* topic, byte* payload, unsigned int length) 
 {
   int i = 0;
+  String responseTopic;
+  String relayStatus;
   
   #ifdef THINGSBOARD
 
@@ -359,10 +364,32 @@ void callback(char* topic, byte* payload, unsigned int length)
   if (methodName.equals("turnOff")) {
     relay_onoff(valueName.toInt(), LOW);
     Serial.println("Turn Relay " + valueName + " OFF");
+    i = valueName.toInt() - 1;
+    if (i < 0 || i > 7) {
+      return;
+    }
+    Serial.print("Relay " + valueName + " status: ");
+    Serial.println(mcp.digitalRead(i) ? 1 : 0);
+    relayStatus = String(mcp.digitalRead(i) ? 1 : 0, DEC);
+    responseTopic = String(topic);
+    
+    responseTopic.replace("request", "response");
+    mqttClient.publish(responseTopic.c_str(), relayStatus.c_str());
   }
   else if (methodName.equals("turnOn")) {
     relay_onoff(valueName.toInt(), HIGH);
     Serial.println("Turn Relay " + valueName + " ON");
+    i = valueName.toInt() - 1;
+    if (i < 0 || i > 7) {
+      return;
+    }
+    Serial.print("Relay " + valueName + " status: ");
+    Serial.println(mcp.digitalRead(i) ? 1 : 0);
+    relayStatus = String(mcp.digitalRead(i) ? 1 : 0, DEC);
+    responseTopic = String(topic);
+    
+    responseTopic.replace("request", "response");
+    mqttClient.publish(responseTopic.c_str(), relayStatus.c_str());
   }
   else if (methodName.equals("getValue")) {
     i = valueName.toInt() - 1;
@@ -370,12 +397,13 @@ void callback(char* topic, byte* payload, unsigned int length)
       return;
     }
     Serial.print("Relay " + valueName + " status: ");
-    Serial.print(mcp.digitalRead(i) ? 1 : 0);
+    Serial.println(mcp.digitalRead(i) ? 1 : 0);
     relayStatus = String(mcp.digitalRead(i) ? 1 : 0, DEC);
     responseTopic = String(topic);
     
     responseTopic.replace("request", "response");
     mqttClient.publish(responseTopic.c_str(), relayStatus.c_str());
+    
     String message = "{\"Relay Status\":" + relayStatus + "}";
     mqttClient.publish("v1/devices/me/telemetry",  message.c_str());
     Serial.print("topic : ");

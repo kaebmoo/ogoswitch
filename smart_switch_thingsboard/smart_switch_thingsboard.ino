@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#define THINGSBOARD
+
 #include <EEPROM.h>
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
@@ -97,6 +99,7 @@ void setup() {
 
   readConfig();
   setupWifi();
+  setupMqtt();
 }
 
 void loop() {
@@ -270,10 +273,11 @@ void reconnect()
     #ifdef THINGSBOARD
     mqttClient.setServer(thingsboardServer, mqttport);
     if (mqttClient.connect(clientID, token, NULL)) {
+      Serial.println();
       Serial.print("Connected with Client ID:  ");
       Serial.print(String(clientID));  
       Serial.print(", Token: ");
-      Serial.print(token);
+      Serial.println(token);
       
       // Subscribing to receive RPC requests
       mqttClient.subscribe("v1/devices/me/rpc/request/+");
@@ -351,6 +355,9 @@ void callback(char* topic, byte* payload, unsigned int length)
     Serial.println("parseObject() failed");
     return;
   }
+
+  String relayStatus;
+  String responseTopic;
 
   // Check request method
   String methodName = String((const char*)data["method"]);

@@ -358,9 +358,6 @@ void callback(char* topic, byte* payload, unsigned int length)
     return;
   }
 
-  String relayStatus;
-  String responseTopic;
-
   // Check request method
   String methodName = String((const char*)data["method"]);
   String valueName = String((const char *) data["params"]);

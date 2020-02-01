@@ -55,10 +55,12 @@ SOFTWARE.
 #include <Adafruit_ADS1015.h>
 
 
-#define BLYNKLOCAL
+// #define BLYNKLOCAL
 // #define SLEEP
-// #define THINGSBOARD
 // #define THINGSPEAK
+
+#define THINGSBOARD
+
 
 #ifdef SLEEP
 const int FW_VERSION = 1;  // 2018 12 1 version 1.0
@@ -141,8 +143,8 @@ char *mqtt_password = "sealwiththekiss";
 const char* mqtt_server = "db.ogonan.com";
 
 
-char *myRoom = "sensor/mySpUo9axZsy36zSgxY0Lm3ZI2DiOJSD";
-char *roomStatus = "sensor/mySpUo9axZsy36zSgxY0Lm3ZI2DiOJSD/status";
+char *myRoom = "sensor/LuvJEbdIWEf5B8QQzm5H";
+char *roomStatus = "sensor/LuvJEbdIWEf5B8QQzm5H/status";  // LuvJEbdIWEf5B8QQzm5H 0PfulBFfoz3qyS4eOfrj
 int mqtt_reconnect = 0;
 
 WiFiClient client;
@@ -195,16 +197,23 @@ void setup() {
 
 
     #ifdef THINGSPEAK
-    ThingSpeak.begin( client );
-    timer.setInterval(sendinterval * 1000, sendThingSpeak);
+      ThingSpeak.begin( client );
+      timer.setInterval(sendinterval * 1000, sendThingSpeak);
     #endif
+    
     #ifdef THINGSBOARD
-    setup_mqtt();
-    timer.setInterval(sendinterval * 1000, sendSoilMoistureData);
+      setup_mqtt();
+      Serial.println("Data send timer setting");
+      timer.setInterval(sendinterval * 1000, sendSoilMoistureData);
+      // send data to thingsboard
+      if ( !mqttClient.connected() ) {
+        reconnect();
+      }
+      sendSoilMoistureData();
     #endif
 
     #if defined(BLYNKLOCAL) || defined(BLYNK)
-    checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
+      checkConnectionTimer.setInterval(15000L, checkBlynkConnection);
     #endif
 
     #ifdef SLEEP

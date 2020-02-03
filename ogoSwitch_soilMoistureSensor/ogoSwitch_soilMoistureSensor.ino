@@ -90,7 +90,7 @@ char token[32] = "MhqKwhgcDr5Y6uKYQ5d4";   // device token from thingsboard serv
 char c_thingsboardServer[41] = "192.168.1.10";
 char c_mqttport[8] = "1883";
 char c_token[33] = "12345678901234567890";
-char c_sendinterval[8] = "10000";
+char c_sendinterval[8] = "60";
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
 char auth[] = "634021991b694e08b004ca8b13f08bc1";

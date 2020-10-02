@@ -410,9 +410,9 @@ void sendSoilMoistureData()
   Serial.print( "]   -> " );
 
   sendDatatoThingsboard("\"soilMoisture1\":", mappedValue1, "\"active1\":", digitalRead(RELAY1));
-  delay(100);
+  delay(1000);
   sendDatatoThingsboard("\"soilMoisture2\":", mappedValue2, "\"active2\":", digitalRead(RELAY2));
-  delay(100);
+  delay(1000);
   sendDatatoThingsboard("\"soilMoisture3\":", mappedValue3, "\"active3\":", digitalRead(RELAY3));
 
 }
@@ -423,7 +423,7 @@ void sendDatatoThingsboard(String field1, int value, String field2, int active)
   // Prepare a JSON payload string
   String payload = "{";
   payload += field1;  payload += value; payload += ",";
-  
+
   #ifdef SLEEP
   float volt = checkBattery();
   payload += "\"battery\":"; payload += volt; payload += ",";
@@ -867,11 +867,11 @@ void set_gpio_status(int pin, boolean enabled) {
 
 }
 
-bool reconnect() 
+bool reconnect()
 {
 
   unsigned long now = millis();
-  
+
   if (1000 > now - lastMqttConnectionAttempt) {
     // Do not repeat within 1 sec.
     return false;
@@ -889,15 +889,15 @@ bool reconnect()
     #else
     if (mqttClient.connect(myRoom, mqtt_user, mqtt_password)) {  // connect to thingsboards
     #endif
-      Serial.println("Connected!");  
+      Serial.println("Connected!");
       // Once connected, publish an announcement...
       // mqttClient.publish(roomStatus, "hello world");
     }
     else {
       lastMqttConnectionAttempt = now;
-      return false;  
+      return false;
     }
-    
+
   }
 
   return true;
